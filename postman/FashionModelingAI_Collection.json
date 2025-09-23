@@ -1,0 +1,245 @@
+{
+	"info": {
+		"_postman_id": "fashion-modeling-ai-collection",
+		"name": "FashionModelingAI API",
+		"description": "Collection for testing the FashionModelingAI API endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						""
+					]
+				},
+				"description": "Check if the API is running"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Fashion Content (Front + Detail)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "frontside",
+							"type": "file",
+							"src": "/tests/test_data/ref1.jpg"
+						},
+						{
+							"key": "detailview",
+							"type": "file",
+							"src": "/tests/test_data/usp1.jpg"
+						},
+						{
+							"key": "text",
+							"value": "woman dress, stylish, elegant, event wear",
+							"type": "text"
+						},
+						{
+							"key": "username",
+							"value": "test_user",
+							"type": "text"
+						},
+						{
+							"key": "product",
+							"value": "dress",
+							"type": "text"
+						},
+						{
+							"key": "generate_video",
+							"value": "false",
+							"type": "text"
+						},
+						{
+							"key": "numberOfOutputs",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "aspectRatio",
+							"value": "9:16",
+							"type": "text"
+						},
+						{
+							"key": "backside",
+							"type": "file",
+							"src": "/tests/test_data/ref2.jpg",
+							"disabled": true
+						},
+						{
+							"key": "sideview",
+							"type": "file",
+							"src": "/tests/test_data/usp2.jpg",
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/api/{{api_version}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"{{api_version}}",
+						"generate"
+					]
+				},
+				"description": "Generate fashion content from input images and text description"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Fashion Content (All Views)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "frontside",
+							"type": "file",
+							"src": "/tests/test_data/ref1.jpg"
+						},
+						{
+							"key": "backside",
+							"type": "file",
+							"src": "/tests/test_data/ref2.jpg"
+						},
+						{
+							"key": "sideview",
+							"type": "file",
+							"src": "/tests/test_data/usp1.jpg"
+						},
+						{
+							"key": "detailview",
+							"type": "file",
+							"src": "/tests/test_data/usp2.jpg"
+						},
+						{
+							"key": "text",
+							"value": "woman dress, stylish, elegant, event wear",
+							"type": "text"
+						},
+						{
+							"key": "username",
+							"value": "test_user",
+							"type": "text"
+						},
+						{
+							"key": "product",
+							"value": "dress",
+							"type": "text"
+						},
+						{
+							"key": "generate_video",
+							"value": "false",
+							"type": "text"
+						},
+						{
+							"key": "numberOfOutputs",
+							"value": "2",
+							"type": "text"
+						},
+						{
+							"key": "aspectRatio",
+							"value": "9:16",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/api/{{api_version}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"{{api_version}}",
+						"generate"
+					]
+				},
+				"description": "Generate fashion content with all view images"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Fashion Content (1:1 Aspect Ratio)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "frontside",
+							"type": "file",
+							"src": "/tests/test_data/ref1.jpg"
+						},
+						{
+							"key": "detailview",
+							"type": "file",
+							"src": "/tests/test_data/usp1.jpg"
+						},
+						{
+							"key": "text",
+							"value": "woman dress, stylish, elegant, event wear",
+							"type": "text"
+						},
+						{
+							"key": "username",
+							"value": "test_user",
+							"type": "text"
+						},
+						{
+							"key": "product",
+							"value": "dress",
+							"type": "text"
+						},
+						{
+							"key": "generate_video",
+							"value": "false",
+							"type": "text"
+						},
+						{
+							"key": "numberOfOutputs",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "aspectRatio",
+							"value": "1:1",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/api/{{api_version}}/generate",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"{{api_version}}",
+						"generate"
+					]
+				},
+				"description": "Generate fashion content with 1:1 square aspect ratio"
+			},
+			"response": []
+		}
+	]
+}

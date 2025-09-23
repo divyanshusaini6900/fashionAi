@@ -391,7 +391,8 @@ CRITICAL:
         username: str,
         product: str,
         generate_video: bool = False,
-        number_of_outputs: int = 1
+        number_of_outputs: int = 1,
+        aspect_ratio: str = "9:16"
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation.
@@ -401,6 +402,8 @@ CRITICAL:
             text_description: Text description of the product
             request_id: Unique identifier for this request
             generate_video: Whether to generate a video (default: False)
+            number_of_outputs: Number of image variations to generate (default: 1)
+            aspect_ratio: Aspect ratio for generated images (default: "9:16")
             
         Returns:
             Dictionary containing URLs to generated files and metadata
@@ -421,7 +424,8 @@ CRITICAL:
             primary_image_bytes, all_variations_bytes_dict = await self.image_generator.generate_images(
                 product_data=product_data,
                 reference_image_paths_dict=image_paths,
-                number_of_outputs=number_of_outputs
+                number_of_outputs=number_of_outputs,
+                aspect_ratio=aspect_ratio
             )
 
             if not primary_image_bytes:

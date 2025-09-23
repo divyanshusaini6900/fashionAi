@@ -360,7 +360,7 @@ Show the person wearing these shoes naturally in an urban environment with good 
                 "num_inference_steps": 40,
                 "guidance_scale": 7.5,
                 "num_outputs": 1,
-                "aspect_ratio": "1:1",
+                "aspect_ratio": "9:16",
                 "output_format": "jpg",
                 "output_quality": 100,
                 "disable_safety_checker": True

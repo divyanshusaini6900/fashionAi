@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test the main API endpoint to debug the response issue
+Test the main API endpoint with all 4 image types and numberOfOutputs parameter
 """
 import asyncio
 import aiohttp
@@ -11,7 +11,7 @@ from pathlib import Path
 
 async def test_main_api():
     """Test the main API endpoint"""
-    print("🧪 Testing Main API Endpoint")
+    print("🧪 Testing Main API Endpoint with All 4 Image Types")
     print("=" * 50)
     
     # Test data
@@ -23,7 +23,7 @@ async def test_main_api():
     data.add_field('username', 'testuser')
     data.add_field('product', 'kurti_lengha')
     data.add_field('generate_video', 'false')
-    data.add_field('numberOfOutputs', '1')
+    data.add_field('numberOfOutputs', '3')  # Generate 3 lifestyle variations
     
     # Add frontside image
     frontside_path = "tests/test_data/ref1.jpg"
@@ -36,12 +36,28 @@ async def test_main_api():
         print(f"❌ Frontside image not found: {frontside_path}")
         return
     
+    # Add backside image
+    backside_path = "tests/test_data/usp1.jpg"
+    if os.path.exists(backside_path):
+        async with aiofiles.open(backside_path, 'rb') as f:
+            backside_content = await f.read()
+        data.add_field('backside', backside_content, filename='usp1.jpg', content_type='image/jpeg')
+        print(f"✅ Added backside image: {backside_path}")
+    
+    # Add sideview image
+    sideview_path = "tests/test_data/ref2.jpg"
+    if os.path.exists(sideview_path):
+        async with aiofiles.open(sideview_path, 'rb') as f:
+            sideview_content = await f.read()
+        data.add_field('sideview', sideview_content, filename='ref2.jpg', content_type='image/jpeg')
+        print(f"✅ Added sideview image: {sideview_path}")
+    
     # Add detailview image
-    detailview_path = "tests/test_data/usp1.jpg"
+    detailview_path = "tests/test_data/usp2.jpg"
     if os.path.exists(detailview_path):
         async with aiofiles.open(detailview_path, 'rb') as f:
             detailview_content = await f.read()
-        data.add_field('detailview', detailview_content, filename='usp1.jpg', content_type='image/jpeg')
+        data.add_field('detailview', detailview_content, filename='usp2.jpg', content_type='image/jpeg')
         print(f"✅ Added detailview image: {detailview_path}")
     
     try:

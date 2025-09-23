@@ -29,6 +29,7 @@ async def generate_fashion(
     product: str = Form(..., description="Product name for SKU ID generation"),
     generate_video: bool = Form(False, description="Whether to generate a video"),
     numberOfOutputs: int = Form(1, description="Number of image outputs to generate (1-4)", ge=1, le=4),
+    aspectRatio: str = Form("9:16", description="Aspect ratio for generated images", example="9:16"),
     frontside: UploadFile = File(..., description="Front side image of the fashion item."),
     backside: Optional[UploadFile] = File(None, description="Back side image of the fashion item."),
     sideview: Optional[UploadFile] = File(None, description="Side view image of the fashion item."),
@@ -78,6 +79,14 @@ async def generate_fashion(
                     detail=f"File {image.filename} is too large. Maximum size is {settings.MAX_UPLOAD_SIZE/1024/1024}MB"
                 )
 
+        # Validate aspectRatio parameter
+        valid_aspect_ratios = ["1:1", "16:9", "4:3", "3:4", "9:16"]
+        if aspectRatio not in valid_aspect_ratios:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid aspectRatio. Must be one of: {', '.join(valid_aspect_ratios)}"
+            )
+
         # Generate a unique request ID
         request_id = str(uuid.uuid4())
         
@@ -96,7 +105,8 @@ async def generate_fashion(
             username=username,
             product=product,
             generate_video=generate_video,
-            number_of_outputs=numberOfOutputs
+            number_of_outputs=numberOfOutputs,
+            aspect_ratio=aspectRatio
         )
         
         logger.info(f"Workflow completed for request_id: {request_id}")

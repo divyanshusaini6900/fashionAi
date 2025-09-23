@@ -92,7 +92,7 @@ class ImageGenerator:
         
         return backgrounds[:4]  # Ensure we only return 4 variations
 
-    def _create_generation_prompt(self, product_data: Dict, background: str) -> str:
+    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16") -> str:
         """
         Creates a specific prompt for each background variation.
         """
@@ -107,11 +107,24 @@ class ImageGenerator:
         else:
             model_type = "Indian woman"  # Default to woman
         
+        # Map aspect ratio to descriptive text
+        aspect_ratio_descriptions = {
+            "1:1": "square aspect ratio (1:1, equal width and height)",
+            "16:9": "landscape orientation with 16:9 aspect ratio (width 1.78x height)",
+            "4:3": "landscape orientation with 4:3 aspect ratio (width 1.33x height)",
+            "3:4": "portrait orientation with 3:4 aspect ratio (height 1.33x width)",
+            "9:16": "portrait orientation with 9:16 aspect ratio (height 1.78x width)"
+        }
+        
+        aspect_description = aspect_ratio_descriptions.get(aspect_ratio, "portrait orientation with 9:16 aspect ratio (height 1.78x width)")
+        
         prompt = f"""
 A single {model_type} model with a confident smile, wearing the exact product from the reference images, positioned in a {background}.
 
 CRITICAL REQUIREMENTS:
 - Show ONLY ONE person in the image
+- Generate image with {aspect_description}
+- The background MUST completely fill the frame with no white borders or margins
 - Follow the reference images exactly for:
   * Dress color, material, and design
   * All design details (neckline, sleeves, hemline)
@@ -123,8 +136,9 @@ CRITICAL REQUIREMENTS:
 - Highlight the dress's details and fabric quality
 - Natural, confident pose showcasing the outfit
 - No duplicate or repeated figures
+- Ensure the background seamlessly extends to all edges of the image frame
 """
-        logger.info(f"Generated prompt for background '{background}': {prompt}")
+        logger.info(f"Generated prompt for background '{background}' with aspect ratio '{aspect_ratio}': {prompt}")
         return prompt
 
     def _convert_image_to_data_url(self, image_path: str) -> str:
@@ -192,7 +206,8 @@ CRITICAL REQUIREMENTS:
     async def _run_replicate_generation(
         self,
         prompt: str,
-        reference_images: List[str]
+        reference_images: List[str],
+        aspect_ratio: str = "9:16"
     ) -> Optional[bytes]:
         """Runs a single image generation request using the best available reference images."""
         if not reference_images:
@@ -208,10 +223,12 @@ CRITICAL REQUIREMENTS:
             "num_inference_steps": 40,
             "guidance_scale": 7.5,
             "num_outputs": 1,
-            "aspect_ratio": "9:16",
+            "aspect_ratio": aspect_ratio,  # Use the passed aspect ratio
             "output_format": "jpg",
             "output_quality": 100,
-            "disable_safety_checker": True
+            "disable_safety_checker": True,
+            "fill_background": True,  # Ensure background fills the entire frame
+            "extend_background": True  # Extend background to edges
         }
         
         try:
@@ -242,7 +259,8 @@ CRITICAL REQUIREMENTS:
     async def _run_image_generation(
         self,
         prompt: str,
-        reference_images: List[str] = None
+        reference_images: List[str] = None,
+        aspect_ratio: str = "9:16"
     ) -> Optional[bytes]:
         """Unified method that chooses between Gemini and Replicate for image generation."""
         if settings.USE_GEMINI_FOR_IMAGES:
@@ -254,11 +272,11 @@ CRITICAL REQUIREMENTS:
             # Fallback to Replicate if Gemini fails
             logger.warning("Gemini generation failed, falling back to Replicate")
             if reference_images:
-                return await self._run_replicate_generation(prompt, reference_images)
+                return await self._run_replicate_generation(prompt, reference_images, aspect_ratio)
         else:
             # Use Replicate
             if reference_images:
-                return await self._run_replicate_generation(prompt, reference_images)
+                return await self._run_replicate_generation(prompt, reference_images, aspect_ratio)
         
         return None
 
@@ -266,7 +284,8 @@ CRITICAL REQUIREMENTS:
         self,
         product_data: Dict,
         reference_image_paths_dict: Dict[str, str],
-        number_of_outputs: int = 1
+        number_of_outputs: int = 1,
+        aspect_ratio: str = "9:16"
     ) -> Tuple[Optional[bytes], Dict[str, bytes]]:
         """
         Generates images for different views with specific background requirements.
@@ -294,8 +313,8 @@ CRITICAL REQUIREMENTS:
                 if detail_view_path:
                     reference_images.append(detail_view_path)
                 
-                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}")
-                image_bytes = await self._run_image_generation(prompt, reference_images)
+                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}", aspect_ratio)
+                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     all_variations[view] = image_bytes
 
@@ -312,8 +331,8 @@ CRITICAL REQUIREMENTS:
             # Generate number_of_outputs variations (minimum 1, maximum as requested)
             for i in range(min(number_of_outputs, len(occasions))):
                 occasion = occasions[i]
-                prompt = self._create_generation_prompt(product_data, f"frontside view for a {occasion.replace('_', ' ')}")
-                image_bytes = await self._run_image_generation(prompt, reference_images)
+                prompt = self._create_generation_prompt(product_data, f"frontside view for a {occasion.replace('_', ' ')}", aspect_ratio)
+                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     # Give it a unique name based on the output number
                     if i == 0:

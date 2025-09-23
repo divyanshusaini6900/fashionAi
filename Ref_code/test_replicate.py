@@ -76,7 +76,7 @@ def process_images_with_flux_kontext(image_directory, prompt, api_key):
                 "num_inference_steps": 40,
                 "guidance_scale": 7.5,
                 "num_outputs": 1,
-                "aspect_ratio": "1:1",
+                "aspect_ratio": "9:16",
                 "output_format": "jpg",
                 "output_quality": 100,
                 "disable_safety_checker": True
