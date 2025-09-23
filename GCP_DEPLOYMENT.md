@@ -419,6 +419,63 @@ sudo journalctl -u fashion_ai -f
 ```
 Press `Ctrl + C` to stop viewing logs.
 
+### If Your Website Only Works on Port 8000 But Not on Standard HTTP Port
+This is a common issue where `http://YOUR-IP-ADDRESS:8000` works but `http://YOUR-IP-ADDRESS` doesn't.
+
+1. Check if Nginx is running and properly configured:
+```bash
+# Test Nginx configuration
+sudo nginx -t
+
+# Check if Nginx is active
+sudo systemctl status nginx
+
+# Check if your application is running
+sudo systemctl status fashion_ai
+```
+
+2. Verify your Nginx configuration:
+```bash
+sudo nano /etc/nginx/sites-available/fashion_ai
+```
+Make sure it contains:
+```nginx
+server {
+    listen 80;
+    server_name your-domain-or-ip;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Serve generated files directly
+    location /files/ {
+        alias /home/your-username/fashionAi/generated_files/;
+    }
+
+    # Increase max upload size
+    client_max_body_size 10M;
+}
+```
+
+3. Ensure the configuration is enabled:
+```bash
+sudo ln -sf /etc/nginx/sites-available/fashion_ai /etc/nginx/sites-enabled/
+sudo nginx -t
+```
+
+4. Restart both services:
+```bash
+sudo systemctl restart nginx
+sudo systemctl restart fashion_ai
+```
+
 ### If You Get Permission Errors
 Make sure your files have the right permissions:
 ```bash
@@ -480,6 +537,8 @@ To update your code when you make changes:
 git pull
 sudo systemctl restart fashion_ai
 ```
+
+For detailed instructions on updating your repository on the VM after pushing changes to GitHub, see [VM_REPOSITORY_UPDATE.md](file://c:\Users\LENOVO\Desktop\fashion\FashionModelingAI-master\VM_REPOSITORY_UPDATE.md).
 
 ## Congratulations!
 

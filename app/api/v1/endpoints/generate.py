@@ -1,11 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 import os
 import logging
+from pathlib import Path
 from app.core.config import settings
 from app.utils.file_helpers import save_upload_files, cleanup_temp_files
-from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, GenerationResult
+from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, GenerationResult, FileAccessResponse
 from app.services.workflow_manager import WorkflowManager
 
 # Configure logging
@@ -141,3 +142,66 @@ async def generate_fashion(
             status_code=500,
             detail=f"An error occurred during generation: {str(e)}"
         )
+
+@router.get("/files/{request_id}", response_model=FileAccessResponse)
+async def get_files_by_request_id(request_id: str):
+    """
+    Retrieve all files associated with a specific request_id.
+    
+    Args:
+        request_id: The unique identifier for the generation request
+        
+    Returns:
+        FileAccessResponse with all file URLs for the request
+    """
+    try:
+        # Validate request_id format (UUID)
+        try:
+            uuid.UUID(request_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid request_id format")
+        
+        # Check if the output directory exists
+        output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+        if not output_dir.exists():
+            raise HTTPException(status_code=500, detail="Output directory does not exist")
+        
+        # Find all files that contain the request_id in their filename
+        files = []
+        for file_path in output_dir.iterdir():
+            if file_path.is_file() and request_id in file_path.name:
+                # Construct the URL for accessing the file
+                file_url = f"{settings.LOCAL_BASE_URL}/files/{file_path.name}"
+                files.append({
+                    "filename": file_path.name,
+                    "url": file_url,
+                    "type": get_file_type(file_path.name)
+                })
+        
+        if not files:
+            raise HTTPException(status_code=404, detail="No files found for this request_id")
+        
+        return {
+            "request_id": request_id,
+            "files": files,
+            "count": len(files)
+        }
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving files: {str(e)}")
+
+def get_file_type(filename: str) -> str:
+    """Determine file type based on extension."""
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    if ext in ['jpg', 'jpeg', 'png', 'gif']:
+        return 'image'
+    elif ext in ['mp4', 'avi', 'mov']:
+        return 'video'
+    elif ext in ['xlsx', 'xls']:
+        return 'excel'
+    elif ext in ['pdf']:
+        return 'pdf'
+    else:
+        return 'other'

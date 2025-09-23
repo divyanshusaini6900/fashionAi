@@ -1,24 +1,83 @@
-from enum import Enum
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, HttpUrl, Field
+from datetime import datetime
 
-class ProcessingStatus(str, Enum):
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+class GenerationRequest(BaseModel):
+    text: str
+    username: str
+    product: str
+    generate_video: bool = False
+    numberOfOutputs: int = 1
+    aspectRatio: str = "9:16"
+
+class GenerationResult(BaseModel):
+    output_image_url: Optional[str] = None
+    image_variations: List[str] = []
+    output_video_url: Optional[str] = None
+    excel_report_url: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+
+class ProcessingStatus(BaseModel):
+    status: str
+    message: str
+    progress: Optional[float] = None
 
 class GenerationResponse(BaseModel):
     request_id: str
-    output_image_url: str  # Primary image (first variation with white background)
-    image_variations: List[str] = []  # Additional image variations with different backgrounds, default empty list
+    output_image_url: Optional[str] = None
+    image_variations: List[str] = []
     output_video_url: Optional[str] = None
-    excel_report_url: str
-    metadata: Dict
+    excel_report_url: Optional[str] = None
+    metadata: Dict[str, Any] = {}
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "request_id": "123e4567-e89b-12d3-a456-426614174000",
+                "output_image_url": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/output.jpg",
+                "image_variations": [
+                    "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/variation1.jpg"
+                ],
+                "output_video_url": None,
+                "excel_report_url": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/report.xlsx",
+                "metadata": {
+                    "processing_time": 45.2,
+                    "model_used": "stable-diffusion-v3"
+                }
+            }
+        }
 
 class ErrorResponse(BaseModel):
     detail: str
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "detail": "Error message describing what went wrong"
+            }
+        }
 
-class GenerationResult(BaseModel):
-    output_image_url: str = Field(..., description="URL to the generated image")
-    excel_report_url: str = Field(..., description="URL to the generated Excel report")
-    metadata: dict = Field(default_factory=dict, description="Additional metadata about the generation")
+class FileAccessResponse(BaseModel):
+    request_id: str
+    files: List[Dict[str, str]]
+    count: int
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "request_id": "123e4567-e89b-12d3-a456-426614174000",
+                "files": [
+                    {
+                        "filename": "image.jpg",
+                        "url": "http://YOUR-IP-ADDRESS/files/generated/123e4567-e89b-12d3-a456-426614174000/image.jpg",
+                        "type": "image"
+                    },
+                    {
+                        "filename": "report.xlsx",
+                        "url": "http://YOUR-IP-ADDRESS/files/generated/123e4567-e89b-12d3-a456-426614174000/report.xlsx",
+                        "type": "excel"
+                    }
+                ],
+                "count": 2
+            }
+        }
