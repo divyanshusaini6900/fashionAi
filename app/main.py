@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import os
 
 app = FastAPI(
     title="Fashion Modeling AI API",
@@ -17,8 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Ensure the output directory exists
+os.makedirs("output", exist_ok=True)
+
 # Mount static files directory for serving generated files
-app.mount("/files", StaticFiles(directory="generated_files"), name="generated_files")
+# Images are saved to 'output' directory, so we mount that instead of 'generated_files'
+app.mount("/files", StaticFiles(directory="output"), name="generated_files")
 
 @app.get("/")
 async def root():
