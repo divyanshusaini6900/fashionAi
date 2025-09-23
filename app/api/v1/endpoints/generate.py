@@ -161,22 +161,56 @@ async def get_files_by_request_id(request_id: str):
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid request_id format")
         
-        # Check if the output directory exists
-        output_dir = Path(settings.LOCAL_OUTPUT_DIR)
-        if not output_dir.exists():
-            raise HTTPException(status_code=500, detail="Output directory does not exist")
-        
-        # Find all files that contain the request_id in their filename
         files = []
-        for file_path in output_dir.iterdir():
-            if file_path.is_file() and request_id in file_path.name:
-                # Construct the URL for accessing the file
-                file_url = f"{settings.LOCAL_BASE_URL}/files/{file_path.name}"
-                files.append({
-                    "filename": file_path.name,
-                    "url": file_url,
-                    "type": get_file_type(file_path.name)
-                })
+        
+        if settings.USE_LOCAL_STORAGE:
+            # Check local storage
+            output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+            if not output_dir.exists():
+                raise HTTPException(status_code=500, detail="Output directory does not exist")
+            
+            # Find all files that contain the request_id in their filename
+            for file_path in output_dir.iterdir():
+                if file_path.is_file() and request_id in file_path.name:
+                    # Construct the URL for accessing the file
+                    file_url = f"{settings.LOCAL_BASE_URL}/files/{file_path.name}"
+                    files.append({
+                        "filename": file_path.name,
+                        "url": file_url,
+                        "type": get_file_type(file_path.name)
+                    })
+        else:
+            # Check GCS storage
+            try:
+                from app.utils.gcs_helpers import get_gcs_client
+                client = get_gcs_client()
+                bucket = client.bucket(settings.GCS_BUCKET_NAME)
+                
+                # List all blobs in the bucket with the request_id prefix
+                prefix = f"generated_files/{request_id}/"
+                blobs = bucket.list_blobs(prefix=prefix)
+                
+                for blob in blobs:
+                    if blob.name.endswith('/') or blob.name == prefix:
+                        continue  # Skip directories and prefix itself
+                    files.append({
+                        "filename": blob.name.split('/')[-1],
+                        "url": blob.public_url,
+                        "type": get_file_type(blob.name)
+                    })
+            except Exception as e:
+                logger.error(f"Error accessing GCS files for request_id {request_id}: {str(e)}")
+                # Fall back to local storage if GCS fails
+                output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                if output_dir.exists():
+                    for file_path in output_dir.iterdir():
+                        if file_path.is_file() and request_id in file_path.name:
+                            file_url = f"{settings.LOCAL_BASE_URL}/files/{file_path.name}"
+                            files.append({
+                                "filename": file_path.name,
+                                "url": file_url,
+                                "type": get_file_type(file_path.name)
+                            })
         
         if not files:
             raise HTTPException(status_code=404, detail="No files found for this request_id")
