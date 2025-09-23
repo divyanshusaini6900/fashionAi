@@ -78,7 +78,7 @@ python tests/run_api_test.py
 1. **Video Generation**: Gemini video generation may take longer than Replicate
 2. **Quality**: Both APIs produce high-quality results with different characteristics
 3. **Cost**: Monitor your API usage for both services
-4. **Local Testing**: You can test everything locally without AWS S3
+4. **Local Testing**: You can test everything locally without cloud storage
 
 ## 🛠️ Installation
 

@@ -1,48 +1,8 @@
-import requests
-import json
-import os
-from PIL import Image
-import io
-
-# --- Configuration ---
-BASE_URL = "http://127.0.0.1:8000"
-ENDPOINT = "/api/v1/generate"
-TEST_IMAGES_DIR = "tests/test_data"
-
-# Ensure your FastAPI server is running before executing this script.
-# You can run it with: uvicorn app.main:app --reload
-
-def create_test_image(color='red', size=(200, 200)):
-    """Create a test image if real images are not available."""
-    img = Image.new('RGB', size, color=color)
-    img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='JPEG')
-    img_byte_arr.seek(0)
-    return img_byte_arr
-
-def ensure_test_images():
-    """Create test images if they don't exist."""
-    os.makedirs(TEST_IMAGES_DIR, exist_ok=True)
-    
-    test_files = {
-        "ref1.jpg": "red",
-        "usp1.jpg": "blue"
-    }
-    
-    for filename, color in test_files.items():
-        filepath = os.path.join(TEST_IMAGES_DIR, filename)
-        if not os.path.exists(filepath):
-            print(f"📸 Creating test image: {filename}")
-            img = Image.new('RGB', (200, 200), color=color)
-            img.save(filepath, 'JPEG')
-
-def run_api_test():
-    """
     Sends a test request to the fashion modeling API with local images.
     Now supports both Gemini and Replicate APIs based on configuration.
     """
     print(f"🚀 Starting LOCAL API test against {BASE_URL}{ENDPOINT}")
-    print("📍 Testing with LOCAL STORAGE (No AWS required)")
+    print("📍 Testing with LOCAL STORAGE (No cloud storage required)")
     print("🤖 API will use Gemini for image/video generation (configurable)")
     
     # Ensure test images exist
@@ -136,4 +96,4 @@ def run_api_test():
         print(f"\nAn unexpected error occurred: {e}")
 
 if __name__ == "__main__":
-    run_api_test() 
+    run_api_test()

@@ -8,7 +8,10 @@ from app.core.config import settings
 import uuid
 import logging
 import io
-from app.utils.s3_helpers import upload_file_to_s3
+
+# Conditional import for Google Cloud Storage
+if not settings.USE_LOCAL_STORAGE and settings.GCS_BUCKET_NAME:
+    from app.utils.gcs_helpers import upload_file_to_gcs
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -68,7 +71,7 @@ def _get_or_create_dir(path: str) -> None:
 
 def save_generated_image(image_bytes: bytes, request_id: str) -> str:
     """
-    Saves a single generated image locally or uploads to S3 based on USE_LOCAL_STORAGE setting.
+    Saves a single generated image locally or uploads to Google Cloud Storage based on USE_LOCAL_STORAGE setting.
     """
     filename = f"{request_id}_generated.jpg"
     
@@ -86,15 +89,28 @@ def save_generated_image(image_bytes: bytes, request_id: str) -> str:
         logger.info(f"Image saved locally to: {absolute_path}")
         return absolute_path
     else:
-        # Upload to S3
+        # Upload to Google Cloud Storage
         object_name = f"generated_files/{request_id}/{filename}"
-        url = upload_file_to_s3(io.BytesIO(image_bytes), object_name)
-        logger.info(f"Image uploaded to S3: {object_name}")
-        return url
+        if settings.GCS_BUCKET_NAME:
+            url = upload_file_to_gcs(io.BytesIO(image_bytes), object_name)
+            logger.info(f"Image uploaded to GCS: {object_name}")
+            return url
+        else:
+            # Fallback to local storage if no cloud storage is configured
+            output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+            _get_or_create_dir(str(output_dir))
+            file_path = output_dir / filename
+            
+            with open(file_path, 'wb') as f:
+                f.write(image_bytes)
+            
+            absolute_path = str(file_path.resolve())
+            logger.info(f"Image saved locally to: {absolute_path} (fallback)")
+            return absolute_path
 
 def save_generated_image_variations(image_bytes_dict: Dict[str, bytes], request_id: str) -> Dict[str, str]:
     """
-    Saves a dictionary of image variations locally or uploads to S3 based on USE_LOCAL_STORAGE setting,
+    Saves a dictionary of image variations locally or uploads to Google Cloud Storage based on USE_LOCAL_STORAGE setting,
     and returns their file paths or URLs keyed by their view name.
     """
     paths_or_urls = {}
@@ -118,23 +134,36 @@ def save_generated_image_variations(image_bytes_dict: Dict[str, bytes], request_
             paths_or_urls[view_name] = absolute_path
             logger.info(f"Image variation saved locally to: {absolute_path}")
     else:
-        # Upload to S3
+        # Upload to Google Cloud Storage
         for view_name, image_bytes in image_bytes_dict.items():
             # Sanitize view_name to be used in a filename
             safe_view_name = view_name.replace(" ", "_").lower()
             filename = f"{request_id}_generated_{safe_view_name}.jpg"
             object_name = f"generated_files/{request_id}/{filename}"
             
-            # Upload to S3
-            url = upload_file_to_s3(io.BytesIO(image_bytes), object_name)
-            paths_or_urls[view_name] = url
-            logger.info(f"Image variation uploaded to S3: {object_name}")
+            # Upload to Google Cloud Storage
+            if settings.GCS_BUCKET_NAME:
+                url = upload_file_to_gcs(io.BytesIO(image_bytes), object_name)
+                paths_or_urls[view_name] = url
+                logger.info(f"Image variation uploaded to GCS: {object_name}")
+            else:
+                # Fallback to local storage if no cloud storage is configured
+                output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                _get_or_create_dir(str(output_dir))
+                file_path = output_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                absolute_path = str(file_path.resolve())
+                paths_or_urls[view_name] = absolute_path
+                logger.info(f"Image variation saved locally to: {absolute_path} (fallback)")
     
     return paths_or_urls
 
 def save_generated_video(video_bytes: bytes, request_id: str) -> str:
     """
-    Saves a generated video locally or uploads to S3 based on USE_LOCAL_STORAGE setting.
+    Saves a generated video locally or uploads to Google Cloud Storage based on USE_LOCAL_STORAGE setting.
     """
     filename = f"{request_id}_generated.mp4"
     
@@ -152,15 +181,28 @@ def save_generated_video(video_bytes: bytes, request_id: str) -> str:
         logger.info(f"Video saved locally to: {absolute_path}")
         return absolute_path
     else:
-        # Upload to S3
+        # Upload to Google Cloud Storage
         object_name = f"generated_files/{request_id}/{filename}"
-        url = upload_file_to_s3(io.BytesIO(video_bytes), object_name)
-        logger.info(f"Video uploaded to S3: {object_name}")
-        return url
+        if settings.GCS_BUCKET_NAME:
+            url = upload_file_to_gcs(io.BytesIO(video_bytes), object_name)
+            logger.info(f"Video uploaded to GCS: {object_name}")
+            return url
+        else:
+            # Fallback to local storage if no cloud storage is configured
+            output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+            _get_or_create_dir(str(output_dir))
+            file_path = output_dir / filename
+            
+            with open(file_path, 'wb') as f:
+                f.write(video_bytes)
+            
+            absolute_path = str(file_path.resolve())
+            logger.info(f"Video saved locally to: {absolute_path} (fallback)")
+            return absolute_path
 
 def save_excel_report(excel_bytes: bytes, request_id: str) -> str:
     """
-    Saves a generated Excel report locally or uploads to S3 based on USE_LOCAL_STORAGE setting.
+    Saves a generated Excel report locally or uploads to Google Cloud Storage based on USE_LOCAL_STORAGE setting.
     """
     filename = f"{request_id}_report.xlsx"
     
@@ -178,8 +220,21 @@ def save_excel_report(excel_bytes: bytes, request_id: str) -> str:
         logger.info(f"Excel report saved locally to: {absolute_path}")
         return absolute_path
     else:
-        # Upload to S3
+        # Upload to Google Cloud Storage
         object_name = f"generated_files/{request_id}/{filename}"
-        url = upload_file_to_s3(io.BytesIO(excel_bytes), object_name)
-        logger.info(f"Excel report uploaded to S3: {object_name}")
-        return url
+        if settings.GCS_BUCKET_NAME:
+            url = upload_file_to_gcs(io.BytesIO(excel_bytes), object_name)
+            logger.info(f"Excel report uploaded to GCS: {object_name}")
+            return url
+        else:
+            # Fallback to local storage if no cloud storage is configured
+            output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+            _get_or_create_dir(str(output_dir))
+            file_path = output_dir / filename
+            
+            with open(file_path, 'wb') as f:
+                f.write(excel_bytes)
+            
+            absolute_path = str(file_path.resolve())
+            logger.info(f"Excel report saved locally to: {absolute_path} (fallback)")
+            return absolute_path

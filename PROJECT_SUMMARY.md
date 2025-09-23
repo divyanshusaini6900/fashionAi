@@ -13,9 +13,9 @@ FashionModelingAI is an advanced AI-powered fashion modeling system that generat
 ## Technology Stack
 - **Backend**: FastAPI (Python)
 - **AI Models**: Google Gemini for image, text, and video generation
-- **Storage**: Local file system (with optional AWS S3 integration)
+- **Storage**: Local file system (with optional Google Cloud Storage integration)
 - **Documentation**: OpenAPI/Swagger
-- **Deployment**: Local development with Uvicorn
+- **Deployment**: Local development with Uvicorn or Google Cloud Platform
 
 ## API Endpoints
 

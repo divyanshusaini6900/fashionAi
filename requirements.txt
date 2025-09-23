@@ -26,6 +26,6 @@ python-jose[cryptography]>=3.3.0  # for JWT tokens
 passlib[bcrypt]>=1.7.4  # for password hashing
 python-dotenv==1.0.1  # for environment variables
 aiofiles>=23.2.1  # for async file operations 
-boto3>=1.28.0  # AWS SDK for Python
+google-cloud-storage>=2.10.0  # Google Cloud Storage SDK
 pandas
-openpyxl 
+openpyxl

@@ -10,6 +10,7 @@ This guide explains how to set up, run, and test the FashionModelingAI project o
    - OpenAI
    - Replicate
    - Google Gemini
+4. Google Cloud Platform account (for deployment)
 
 ## Setup Instructions
 
@@ -48,11 +49,13 @@ OPENAI_API_KEY=your_openai_api_key_here
 REPLICATE_API_TOKEN=your_replicate_api_token_here
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# AWS Configuration (optional for local development)
-S3_BUCKET_NAME=your_s3_bucket_name
-AWS_ACCESS_KEY_ID=your_aws_access_key_id
-AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
-AWS_REGION=ap-south-1
+# Storage Configuration (Local Storage - Recommended for development)
+USE_LOCAL_STORAGE=true
+LOCAL_BASE_URL=http://127.0.0.1:8000
+
+# GCS Configuration (optional for local development)
+GCS_BUCKET_NAME=your_gcs_bucket_name
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/service-account-key.json
 ```
 
 ## Running the Application
@@ -134,6 +137,10 @@ You can also test the API using the provided Python script:
 ```bash
 python test_api_with_postman_data.py
 ```
+
+## Google Cloud Platform Deployment
+
+For deploying to Google Cloud Platform, please refer to the detailed guide in [GCP_DEPLOYMENT.md](GCP_DEPLOYMENT.md).
 
 ## Project Structure
 

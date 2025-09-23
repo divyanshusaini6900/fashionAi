@@ -8,7 +8,7 @@ An advanced AI-powered fashion modeling system that generates professional fashi
 - **Video Generation**: Create dynamic product videos from static images
 - **Excel Report Generation**: Automatic generation of detailed product reports
 - **Multi-View Support**: Process multiple angles (front, back, detail views)
-- **Secure File Storage**: AWS S3 integration for reliable file management
+- **Secure File Storage**: Google Cloud Storage integration for reliable file management
 - **RESTful API**: Easy integration with existing e-commerce platforms
 - **Customizable Outputs**: Control style, background, and model characteristics
 
@@ -18,9 +18,10 @@ An advanced AI-powered fashion modeling system that generates professional fashi
 - **AI Models**:
   - OpenAI for image generation
   - Replicate for video processing
-- **Storage**: AWS S3
+  - Google Gemini for advanced AI capabilities
+- **Storage**: Google Cloud Storage
 - **Documentation**: OpenAPI/Swagger
-- **Deployment**: AWS EC2, Nginx, Gunicorn
+- **Deployment**: Google Cloud Platform (Compute Engine)
 
 ## 📋 Prerequisites
 
@@ -28,9 +29,8 @@ Before setting up the project, ensure you have:
 
 - Python 3.8 or higher
 - pip (Python package manager)
-- AWS account with S3 access
-- OpenAI API key
-- Replicate API token
+- API keys for OpenAI, Replicate, and Google Gemini
+- Google Cloud Platform account
 - Git
 
 ## 🚀 Quick Start
@@ -62,12 +62,11 @@ Before setting up the project, ensure you have:
    # API Keys
    OPENAI_API_KEY="your-openai-key"
    REPLICATE_API_TOKEN="your-replicate-token"
+   GEMINI_API_KEY="your-gemini-key"
 
-   # AWS Configuration
-   S3_BUCKET_NAME="your-bucket-name"
-   AWS_ACCESS_KEY_ID="your-access-key"
-   AWS_SECRET_ACCESS_KEY="your-secret-key"
-   AWS_REGION="us-east-1"
+   # Storage Configuration (Local Storage - Recommended for development)
+   USE_LOCAL_STORAGE="true"
+   LOCAL_BASE_URL="http://localhost:8000"
    ```
 
 5. **Run the Application**
@@ -95,7 +94,8 @@ FashionModelingAI/
 │   │   ├── image_generator.py    # AI image generation
 │   │   └── video_generator.py    # Video processing
 │   └── utils/
-│       └── file_helpers.py       # File handling utilities
+│       ├── file_helpers.py       # File handling utilities
+│       └── gcs_helpers.py        # Google Cloud Storage utilities
 ├── tests/
 │   └── test_generate.py          # API tests
 └── requirements.txt              # Project dependencies
@@ -174,7 +174,7 @@ if response.status_code == 200:
 
 1. **API Keys**: Never commit `.env` file or expose API keys
 2. **File Validation**: The system validates file types and sizes
-3. **S3 Security**: Bucket is configured for secure uploads with public read access
+3. **Storage Security**: Cloud storage is configured for secure uploads with appropriate access controls
 4. **Rate Limiting**: API endpoints include rate limiting
 5. **Input Sanitization**: All inputs are validated and sanitized
 
@@ -194,9 +194,18 @@ Detailed error messages are provided in the response body.
 
 - Image processing is handled asynchronously
 - File uploads are streamed to minimize memory usage
-- S3 integration includes retry logic
+- Cloud storage integration includes retry logic
 - Caching implemented for frequent requests
 - Configurable worker processes for scalability
+
+## ☁️ Deployment to Google Cloud Platform
+
+Choose your preferred deployment guide:
+
+- **[GCP_DEPLOYMENT.md](GCP_DEPLOYMENT.md)** - Complete step-by-step guide with detailed explanations
+- **[GCP_DEPLOYMENT_SIMPLE.md](GCP_DEPLOYMENT_SIMPLE.md)** - Simple checklist format
+- **[GCP_DEPLOYMENT_ESSENTIAL.md](GCP_DEPLOYMENT_ESSENTIAL.md)** - Just the essential steps
+- **[GCP_DEPLOYMENT_VISUAL.md](GCP_DEPLOYMENT_VISUAL.md)** - Visual guide with screenshot descriptions
 
 ## 🤝 Contributing
 
@@ -217,5 +226,6 @@ Detailed error messages are provided in the response body.
 
 - OpenAI for image generation capabilities
 - Replicate for video processing
+- Google for Gemini AI capabilities
 - FastAPI framework
-- AWS for infrastructure support
+- Google Cloud Platform for infrastructure support

@@ -42,15 +42,13 @@ class Settings(BaseSettings):
     USE_GEMINI_FOR_TEXT: bool = True    # Set to False to use OpenAI
 
     # Storage Configuration
-    USE_LOCAL_STORAGE: bool = True  # Set to False for S3
+    USE_LOCAL_STORAGE: bool = True  # Set to False for Cloud Storage
     LOCAL_BASE_URL: str = "http://localhost:8000"  # Base URL for local files
     LOCAL_OUTPUT_DIR: str = "output"  # Direct output folder for local files
     
-    # S3 Configuration (optional for local development)
-    S3_BUCKET_NAME: str = ""
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_REGION: str = "ap-south-1"
+    # GCS Configuration (Google Cloud - optional for local development)
+    GCS_BUCKET_NAME: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
 
     # File Storage Configuration
     GENERATED_FILES_DIR: str = "generated_files"

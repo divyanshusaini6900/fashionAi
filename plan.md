@@ -1,22 +1,7 @@
-# Production-Ready Fashion Modeling AI System Plan
-
-## 1. Project Overview
-
-The project aims to build a robust Python backend API for a fashion modeling AI system. The API will be consumed by a mobile application. It will accept multiple images and a text description, process them through a multi-agent AI workflow, generate a final composite image, and compile relevant data into an Excel report. The system needs to be scalable, maintainable, and production-ready.
-
-## 2. Technology Stack
-
-- **Backend Framework**: FastAPI (for its high performance, async capabilities, and automatic OpenAPI documentation)
-- **Image Processing**: Pillow (PIL)
-- **Excel Generation**: `openpyxl` or `pandas`
-- **AI/ML Models**:
-  - OpenAI API (for tasks like image analysis or text processing)
-  - Replicate API (for running specific image generation models)
-  - The multi-agent logic from `Ref_code/multiagent_system.py` and `Ref_code/workflow.py` will be integrated.
 - **Data Validation**: Pydantic (comes with FastAPI)
 - **Dependency Management**: `pip` with `requirements.txt`.
 - **Web Server**: Uvicorn with Gunicorn for production.
-- **File Storage**: Local file system for development, with a design that allows plugging in cloud storage (like AWS S3) for production.
+- **File Storage**: Local file system for development, with a design that allows plugging in cloud storage (like Google Cloud Storage) for production.
 
 ## 3. Project Structure
 
@@ -49,6 +34,7 @@ FashionModelingAI/
 │   └── utils/
 │       ├── __init__.py
 │       └── file_helpers.py   # Utility functions for file operations
+│       └── gcs_helpers.py    # Google Cloud Storage helper functions
 ├── Ref_code/               # Reference code (will be refactored into `app/`)
 ├── generated_files/        # Directory to store output images and Excel files
 │   ├── images/
@@ -147,6 +133,7 @@ graph TD
 - **Environment Variables**: All sensitive information (API keys, etc.) will be managed through environment variables, not hardcoded. The `app/core/config.py` will handle this.
 - **Containerization**: The application will be containerized using Docker for portability and ease of deployment. A `Dockerfile` will be created.
 - **Production Server**: Use Gunicorn as the application server to manage multiple Uvicorn workers, ensuring the application can handle concurrent requests.
+- **Cloud Deployment**: Deploy to Google Cloud Platform using Compute Engine for the application server and Cloud Storage for file storage.
 
 ## 10. Development Tasks (Roadmap)
 
