@@ -262,16 +262,41 @@ If you want to store files in the cloud instead of on your VM (recommended for p
 5. Click "Create"
 6. Save this file to your computer (we'll upload it to your VM)
 
-### 10.4 Upload the Key to Your VM
-1. In your VM terminal, type:
+### 10.4 Create Keys Folder and Upload the Key to Your VM
+1. In your VM terminal, create the keys directory:
 ```bash
 mkdir -p ~/keys
 ```
-2. Minimize your terminal window
-3. Click the three dots menu (⋮) in your terminal window
-4. Click "Upload file"
-5. Select your downloaded JSON key file
-6. Maximize your terminal window
+This creates a folder named "keys" in your home directory.
+
+2. Set proper permissions for the keys directory:
+```bash
+chmod 700 ~/keys
+```
+
+3. Minimize your terminal window by clicking the "-" button in the terminal header.
+
+4. Click the three dots menu (⋮) in the terminal window header.
+
+5. Click "Upload file" from the dropdown menu.
+
+6. In the file selection dialog:
+   - Navigate to where you saved the JSON key file on your local computer
+   - Select the downloaded JSON key file (it will have a name like `your-project-123456-abcdef123456.json`)
+   - Click "Open" or "Select"
+
+7. Maximize your terminal window by clicking the maximize button.
+
+8. Verify the file was uploaded successfully:
+```bash
+ls -la ~/keys/
+```
+You should see your JSON key file listed.
+
+9. Set proper permissions for the key file (replace `your-key-file.json` with the actual filename):
+```bash
+chmod 600 ~/keys/your-key-file.json
+```
 
 ### 10.5 Update Your Environment File
 Type:
@@ -288,13 +313,23 @@ GEMINI_API_KEY="your-real-gemini-api-key-here"
 
 # Storage Configuration (Cloud Storage)
 USE_LOCAL_STORAGE="false"
-GCS_BUCKET_NAME="your-bucket-name"
+GCS_BUCKET_NAME="fashion-ai-storage"
 GOOGLE_APPLICATION_CREDENTIALS="/home/your-username/keys/your-key-file.json"
 ```
 
+Important notes:
+- Replace `your-key-file.json` with the actual name of your uploaded JSON key file
+- Replace `your-username` with your actual username (find it by typing `whoami` in the terminal)
+
 Save and exit (Ctrl+X, Y, Enter)
 
-### 10.6 Restart Your Application
+### 10.6 Set Proper Permissions for Environment File
+Ensure your environment file has the correct permissions:
+```bash
+chmod 644 .env
+```
+
+### 10.7 Restart Your Application
 Type:
 ```bash
 sudo systemctl restart fashion_ai
@@ -388,6 +423,8 @@ Press `Ctrl + C` to stop viewing logs.
 Make sure your files have the right permissions:
 ```bash
 chmod 644 .env
+chmod 600 ~/keys/your-key-file.json
+chmod 700 ~/keys
 ```
 
 ### If Nginx Configuration Fails
