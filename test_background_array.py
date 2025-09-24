@@ -18,7 +18,7 @@ def test_background_array_feature():
             {
                 "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-19%20at%2012.36.01_0cca7d65.jpg?alt=media&token=704093fa-6d46-4006-a459-ed995cb423a2",
                 "view": "front",
-                "backgrounds": [0, 1, 0]  # 1 white, 0 plain, 0 random
+                "backgrounds": [0, 0, 1]  # 1 white, 0 plain, 0 random
             }
         ],
         "productType": "general",

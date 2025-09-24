@@ -393,7 +393,8 @@ CRITICAL:
         product: str,
         isVideo: bool = False,
         number_of_outputs: int = 1,
-        aspect_ratio: str = "9:16"
+        aspect_ratio: str = "9:16",
+        gender: str = None  # Add gender parameter
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation with background array support.
@@ -406,6 +407,7 @@ CRITICAL:
             isVideo: Whether to generate a video (default: False)
             number_of_outputs: Number of image variations to generate (default: 1)
             aspect_ratio: Aspect ratio for generated images (default: "9:16")
+            gender: Gender of the model to display clothing on (male/female)
             
         Returns:
             Dictionary containing URLs to generated files and metadata
@@ -428,7 +430,8 @@ CRITICAL:
                 reference_image_paths_dict=image_paths,
                 background_config=background_config,
                 number_of_outputs=number_of_outputs,
-                aspect_ratio=aspect_ratio
+                aspect_ratio=aspect_ratio,
+                gender=gender  # Pass gender parameter
             )
 
             if not primary_image_bytes:
@@ -522,7 +525,8 @@ CRITICAL:
         product: str,
         isVideo: bool = False,
         number_of_outputs: int = 1,
-        aspect_ratio: str = "9:16"
+        aspect_ratio: str = "9:16",
+        gender: str = None  # Add gender parameter
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation.
@@ -534,6 +538,7 @@ CRITICAL:
             isVideo: Whether to generate a video (default: False)
             number_of_outputs: Number of image variations to generate (default: 1)
             aspect_ratio: Aspect ratio for generated images (default: "9:16")
+            gender: Gender of the model to display clothing on (male/female)
             
         Returns:
             Dictionary containing URLs to generated files and metadata
@@ -555,7 +560,8 @@ CRITICAL:
                 product_data=product_data,
                 reference_image_paths_dict=image_paths,
                 number_of_outputs=number_of_outputs,
-                aspect_ratio=aspect_ratio
+                aspect_ratio=aspect_ratio,
+                gender=gender  # Pass gender parameter
             )
 
             if not primary_image_bytes:

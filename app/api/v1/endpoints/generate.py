@@ -32,6 +32,7 @@ async def generate_fashion(
     isVideo: bool = Form(False, description="Whether to generate a video"),
     numberOfOutputs: int = Form(1, description="Number of image outputs to generate (1-4)", ge=1, le=4),
     aspectRatio: str = Form("9:16", description="Aspect ratio for generated images", example="9:16"),
+    gender: str = Form(None, description="Gender of the model to display clothing on (male/female)"),  # Add gender parameter
     frontside: UploadFile = File(..., description="Front side image of the fashion item."),
     backside: Optional[UploadFile] = File(None, description="Back side image of the fashion item."),
     sideview: Optional[UploadFile] = File(None, description="Side view image of the fashion item."),
@@ -45,11 +46,19 @@ async def generate_fashion(
         background_tasks: FastAPI background tasks handler
         images: List of image files to process
         text: Text description or instructions
+        gender: Gender of the model to display clothing on (male/female)
         
     Returns:
         GenerationResponse with status and file URLs
     """
     try:
+        # Validate gender parameter if provided
+        if gender and gender.lower() not in ['male', 'female']:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid gender parameter. Must be 'male' or 'female'."
+            )
+        
         # Collect all available images into a dictionary.
         images_dict = {
             "frontside": frontside,
@@ -108,7 +117,8 @@ async def generate_fashion(
             product=product,
             isVideo=isVideo,
             number_of_outputs=numberOfOutputs,
-            aspect_ratio=aspectRatio
+            aspect_ratio=aspectRatio,
+            gender=gender  # Pass gender parameter
         )
         
         logger.info(f"Workflow completed for request_id: {request_id}")
@@ -171,6 +181,14 @@ async def generate_fashion_with_background_array(
         json_data = await request.json()
         generation_request = GenerationRequest(**json_data)
         
+        # Extract gender parameter with validation
+        gender = generation_request.gender if hasattr(generation_request, 'gender') else None
+        if gender and gender.lower() not in ['male', 'female']:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid gender parameter. Must be 'male' or 'female'."
+            )
+        
         # Generate a unique request ID
         request_id = str(uuid.uuid4())
         
@@ -209,7 +227,8 @@ async def generate_fashion_with_background_array(
             product=generation_request.productType,
             isVideo=generation_request.isVideo,
             number_of_outputs=generation_request.numberOfOutputs,
-            aspect_ratio="9:16"  # Default aspect ratio
+            aspect_ratio="9:16",  # Default aspect ratio
+            gender=gender  # Pass gender parameter
         )
         
         logger.info(f"Workflow completed for request_id: {request_id}")

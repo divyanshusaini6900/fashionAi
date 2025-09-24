@@ -92,20 +92,23 @@ class ImageGenerator:
         
         return backgrounds[:4]  # Ensure we only return 4 variations
 
-    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16") -> str:
+    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16", gender: str = None) -> str:
         """
         Creates a specific prompt for each background variation.
         """
-        ideal_for = product_data.get('Ideal For', 'women')
-        occasion = product_data.get('Occasion', 'casual')
-        
-        # Clean up the ideal_for to ensure proper grammar
-        if 'women' in ideal_for.lower() or 'female' in ideal_for.lower():
-            model_type = "Indian woman"
-        elif 'men' in ideal_for.lower() or 'male' in ideal_for.lower():
-            model_type = "Indian man"
+        # Use the provided gender parameter, or fall back to product data analysis
+        if gender and gender.lower() in ['male', 'female']:
+            # Use the explicitly provided gender
+            model_type = "Indian man" if gender.lower() == "male" else "Indian woman"
         else:
-            model_type = "Indian woman"  # Default to woman
+            # Fall back to the existing logic based on product analysis
+            ideal_for = product_data.get('Ideal For', 'women')
+            if 'women' in ideal_for.lower() or 'female' in ideal_for.lower():
+                model_type = "Indian woman"
+            elif 'men' in ideal_for.lower() or 'male' in ideal_for.lower():
+                model_type = "Indian man"
+            else:
+                model_type = "Indian woman"  # Default to woman
         
         # Map aspect ratio to descriptive text
         aspect_ratio_descriptions = {
@@ -118,11 +121,12 @@ class ImageGenerator:
         
         aspect_description = aspect_ratio_descriptions.get(aspect_ratio, "portrait orientation with 9:16 aspect ratio (height 1.78x width)")
         
+        # Enhanced prompt with advanced fashion photography techniques
         prompt = f"""
-A single {model_type} model with a confident smile, wearing the exact product from the reference images, positioned in a {background}.
+Professional high-fashion photography of a single {model_type} model wearing the exact product from the reference images, positioned in a {background}.
 
-CRITICAL REQUIREMENTS:
-- Show ONLY ONE person in the image
+PHOTOGRAPHY DIRECTIVES:
+- Show ONLY ONE person in the image with professional studio lighting
 - Generate image with {aspect_description}
 - The background MUST completely fill the frame with no white borders or margins
 - Follow the reference images exactly for:
@@ -132,13 +136,28 @@ CRITICAL REQUIREMENTS:
   * Fit and silhouette
   * Length and proportions
 
-- Professional fashion photography with excellent lighting
-- Highlight the dress's details and fabric quality
-- Natural, confident pose showcasing the outfit
-- No duplicate or repeated figures
-- Ensure the background seamlessly extends to all edges of the image frame
+ADVANCED FASHION PHOTOGRAPHY TECHNIQUES:
+- Use cinematic lighting with dramatic shadows to highlight fabric texture
+- Apply golden hour lighting principles for natural skin tones
+- Position model with confident, natural posture showcasing the outfit
+- Ensure perfect color matching between reference and generated clothing
+- Capture intricate details like stitching, embroidery, and fabric weave
+- Use shallow depth of field to focus on the garment while blurring background slightly
+
+MODEL SPECIFICATIONS:
+- {model_type.capitalize()} with professional runway modeling posture
+- Natural, confident facial expression with subtle smile
+- Perfect body proportions and professional posing
+- Skin tone and features appropriate for the {model_type} specification
+- No duplicate or repeated figures in the composition
+
+ENVIRONMENTAL INTEGRATION:
+- Background seamlessly extends to all edges of the image frame
+- Lighting matches the environment (natural for outdoor, studio for indoor)
+- Shadows and reflections consistent with the scene
+- Professional fashion editorial quality throughout
 """
-        logger.info(f"Generated prompt for background '{background}' with aspect ratio '{aspect_ratio}': {prompt}")
+        logger.info(f"Generated prompt for background '{background}' with aspect ratio '{aspect_ratio}' and gender '{gender}': {prompt}")
         return prompt
 
     def _convert_image_to_data_url(self, image_path: str) -> str:
@@ -286,7 +305,8 @@ CRITICAL REQUIREMENTS:
         reference_image_paths_dict: Dict[str, str],
         background_config: Dict[str, List[int]],  # {view: [white_count, plain_count, random_count]}
         number_of_outputs: int = 1,
-        aspect_ratio: str = "9:16"
+        aspect_ratio: str = "9:16",
+        gender: str = None  # Add gender parameter
     ) -> Tuple[Optional[bytes], Dict[str, bytes]]:
         """
         Generates images for different views with specific background requirements based on background arrays.
@@ -297,6 +317,7 @@ CRITICAL REQUIREMENTS:
             background_config: Dictionary mapping views to background arrays [white, plain, random]
             number_of_outputs: Number of outputs (kept for compatibility)
             aspect_ratio: Aspect ratio for generated images
+            gender: Gender of the model to display clothing on (male/female)
             
         Returns:
             Tuple of (primary_image_bytes, dictionary_of_all_variations).
@@ -327,7 +348,8 @@ CRITICAL REQUIREMENTS:
                 prompt = self._create_generation_prompt(
                     product_data, 
                     f"{view} view in a clean white studio background", 
-                    aspect_ratio
+                    aspect_ratio,
+                    gender  # Pass gender parameter
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -338,7 +360,8 @@ CRITICAL REQUIREMENTS:
                 prompt = self._create_generation_prompt(
                     product_data, 
                     f"{view} view in a plain colored background", 
-                    aspect_ratio
+                    aspect_ratio,
+                    gender  # Pass gender parameter
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -368,7 +391,8 @@ CRITICAL REQUIREMENTS:
                 prompt = self._create_generation_prompt(
                     product_data, 
                     f"{view} view in a {occasion}", 
-                    aspect_ratio
+                    aspect_ratio,
+                    gender  # Pass gender parameter
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -394,7 +418,8 @@ CRITICAL REQUIREMENTS:
         product_data: Dict,
         reference_image_paths_dict: Dict[str, str],
         number_of_outputs: int = 1,
-        aspect_ratio: str = "9:16"
+        aspect_ratio: str = "9:16",
+        gender: str = None  # Add gender parameter
     ) -> Tuple[Optional[bytes], Dict[str, bytes]]:
         """
         Generates images for different views with specific background requirements.
@@ -422,7 +447,7 @@ CRITICAL REQUIREMENTS:
                 if detail_view_path:
                     reference_images.append(detail_view_path)
                 
-                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}", aspect_ratio)
+                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}", aspect_ratio, gender)
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     all_variations[view] = image_bytes
@@ -440,7 +465,7 @@ CRITICAL REQUIREMENTS:
             # Generate number_of_outputs variations (minimum 1, maximum as requested)
             for i in range(min(number_of_outputs, len(occasions))):
                 occasion = occasions[i]
-                prompt = self._create_generation_prompt(product_data, f"frontside view for a {occasion.replace('_', ' ')}", aspect_ratio)
+                prompt = self._create_generation_prompt(product_data, f"frontside view for a {occasion.replace('_', ' ')}", aspect_ratio, gender)
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     # Give it a unique name based on the output number
