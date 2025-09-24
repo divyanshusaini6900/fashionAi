@@ -17,7 +17,8 @@ from app.utils.file_helpers import (
     save_generated_image,
     save_generated_video,
     save_excel_report,
-    save_generated_image_variations
+    save_generated_image_variations,
+    save_original_and_upscaled_images
 )
 from PIL import Image
 from io import BytesIO
@@ -441,7 +442,9 @@ CRITICAL:
             if not primary_image_bytes:
                 raise ValueError("Failed to generate a primary image.")
 
-            # 3. Upscale images if requested
+            # 3. Save original images and upscale if requested
+            original_variations_bytes_dict = all_variations_bytes_dict.copy()  # Keep a copy of original images
+            
             if upscale:
                 logger.info("Upscaling generated images...")
                 # Upscale primary image
@@ -457,9 +460,22 @@ CRITICAL:
                         all_variations_bytes_dict[key] = upscaled_bytes
                         logger.info(f"Variation {key} upscaled successfully")
 
-            # 4. Save all image variations and get their URLs
-            # The function now expects a dictionary of bytes
-            variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+            # 4. Save both original and upscaled images with distinct names
+            if upscale:
+                # Save both original and upscaled images
+                saved_images_result = save_original_and_upscaled_images(
+                    original_variations_bytes_dict, 
+                    all_variations_bytes_dict, 
+                    request_id
+                )
+                # Use upscaled images for the rest of the workflow
+                variation_urls_dict = saved_images_result['upscaled']
+                # Store original image URLs in metadata
+                original_image_urls = saved_images_result['original']
+            else:
+                # Save only generated images (no upscaling)
+                variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+                original_image_urls = {}
             
             # The primary image URL is the first frontside image, or the first one saved.
             primary_image_url = None
@@ -521,7 +537,8 @@ CRITICAL:
                         "analysis": analysis_json,
                         "request_id": request_id,
                         "total_variations": len(variation_urls_dict),
-                        "upscaled": upscale
+                        "upscaled": upscale,
+                        "original_image_urls": original_image_urls
                     }
                 }
             except Exception as excel_error:
@@ -547,8 +564,8 @@ CRITICAL:
         isVideo: bool = False,
         number_of_outputs: int = 1,
         aspect_ratio: str = "9:16",
-        gender: str = None,  # Add gender parameter
-        upscale: bool = True  # Add upscale parameter
+        gender: str = None,
+        upscale: bool = True
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation.
@@ -590,7 +607,9 @@ CRITICAL:
             if not primary_image_bytes:
                 raise ValueError("Failed to generate a primary image.")
 
-            # 3. Upscale images if requested
+            # 3. Save original images and upscale if requested
+            original_variations_bytes_dict = all_variations_bytes_dict.copy()  # Keep a copy of original images
+            
             if upscale:
                 logger.info("Upscaling generated images...")
                 # Upscale primary image
@@ -606,9 +625,22 @@ CRITICAL:
                         all_variations_bytes_dict[key] = upscaled_bytes
                         logger.info(f"Variation {key} upscaled successfully")
 
-            # 4. Save all image variations and get their URLs
-            # The function now expects a dictionary of bytes
-            variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+            # 4. Save both original and upscaled images with distinct names
+            if upscale:
+                # Save both original and upscaled images
+                saved_images_result = save_original_and_upscaled_images(
+                    original_variations_bytes_dict, 
+                    all_variations_bytes_dict, 
+                    request_id
+                )
+                # Use upscaled images for the rest of the workflow
+                variation_urls_dict = saved_images_result['upscaled']
+                # Store original image URLs in metadata
+                original_image_urls = saved_images_result['original']
+            else:
+                # Save only generated images (no upscaling)
+                variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+                original_image_urls = {}
             
             # The primary image URL is the one associated with the 'frontside' view, or the first one saved.
             primary_image_url = variation_urls_dict.get("frontside") or next(iter(variation_urls_dict.values()), None)
@@ -663,7 +695,8 @@ CRITICAL:
                         "analysis": analysis_json,
                         "request_id": request_id,
                         "total_variations": len(variation_urls_dict),
-                        "upscaled": upscale
+                        "upscaled": upscale,
+                        "original_image_urls": original_image_urls
                     }
                 }
             except Exception as excel_error:

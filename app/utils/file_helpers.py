@@ -238,3 +238,107 @@ def save_excel_report(excel_bytes: bytes, request_id: str) -> str:
             absolute_path = str(file_path.resolve())
             logger.info(f"Excel report saved locally to: {absolute_path} (fallback)")
             return absolute_path
+
+def save_original_and_upscaled_images(
+    original_bytes_dict: Dict[str, bytes], 
+    upscaled_bytes_dict: Dict[str, bytes], 
+    request_id: str
+) -> Dict[str, Dict[str, str]]:
+    """
+    Saves both original and upscaled images with distinct naming conventions.
+    
+    Args:
+        original_bytes_dict: Dictionary of original image bytes keyed by view name
+        upscaled_bytes_dict: Dictionary of upscaled image bytes keyed by view name
+        request_id: Unique request identifier
+        
+    Returns:
+        Dictionary with 'original' and 'upscaled' keys, each containing
+        a dictionary of file paths/urls keyed by view name
+    """
+    result = {
+        'original': {},
+        'upscaled': {}
+    }
+    
+    # Save original images
+    if original_bytes_dict:
+        for view_name, image_bytes in original_bytes_dict.items():
+            # Sanitize view_name to be used in a filename
+            safe_view_name = view_name.replace(" ", "_").lower()
+            filename = f"{request_id}_original_{safe_view_name}.jpg"
+            
+            if settings.USE_LOCAL_STORAGE:
+                # Save directly to output folder
+                output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                _get_or_create_dir(str(output_dir))
+                file_path = output_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                # Return the absolute file path instead of HTTP URL
+                absolute_path = str(file_path.resolve())
+                result['original'][view_name] = absolute_path
+                logger.info(f"Original image saved locally to: {absolute_path}")
+            else:
+                # Upload to Google Cloud Storage
+                object_name = f"generated_files/{request_id}/{filename}"
+                if settings.GCS_BUCKET_NAME:
+                    url = upload_file_to_gcs(io.BytesIO(image_bytes), object_name)
+                    result['original'][view_name] = url
+                    logger.info(f"Original image uploaded to GCS: {object_name}")
+                else:
+                    # Fallback to local storage if no cloud storage is configured
+                    output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                    _get_or_create_dir(str(output_dir))
+                    file_path = output_dir / filename
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(image_bytes)
+                    
+                    absolute_path = str(file_path.resolve())
+                    result['original'][view_name] = absolute_path
+                    logger.info(f"Original image saved locally to: {absolute_path} (fallback)")
+    
+    # Save upscaled images
+    if upscaled_bytes_dict:
+        for view_name, image_bytes in upscaled_bytes_dict.items():
+            # Sanitize view_name to be used in a filename
+            safe_view_name = view_name.replace(" ", "_").lower()
+            filename = f"{request_id}_upscaled_{safe_view_name}.jpg"
+            
+            if settings.USE_LOCAL_STORAGE:
+                # Save directly to output folder
+                output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                _get_or_create_dir(str(output_dir))
+                file_path = output_dir / filename
+                
+                with open(file_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                # Return the absolute file path instead of HTTP URL
+                absolute_path = str(file_path.resolve())
+                result['upscaled'][view_name] = absolute_path
+                logger.info(f"Upscaled image saved locally to: {absolute_path}")
+            else:
+                # Upload to Google Cloud Storage
+                object_name = f"generated_files/{request_id}/{filename}"
+                if settings.GCS_BUCKET_NAME:
+                    url = upload_file_to_gcs(io.BytesIO(image_bytes), object_name)
+                    result['upscaled'][view_name] = url
+                    logger.info(f"Upscaled image uploaded to GCS: {object_name}")
+                else:
+                    # Fallback to local storage if no cloud storage is configured
+                    output_dir = Path(settings.LOCAL_OUTPUT_DIR)
+                    _get_or_create_dir(str(output_dir))
+                    file_path = output_dir / filename
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(image_bytes)
+                    
+                    absolute_path = str(file_path.resolve())
+                    result['upscaled'][view_name] = absolute_path
+                    logger.info(f"Upscaled image saved locally to: {absolute_path} (fallback)")
+    
+    return result
