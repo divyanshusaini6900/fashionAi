@@ -17,6 +17,120 @@ router = APIRouter()
 workflow_manager = WorkflowManager()
 
 @router.post(
+    "/generate/image",
+    response_model=GenerationResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def generate_fashion_image(
+    background_tasks: BackgroundTasks,
+    request: Request
+):
+    """
+    Generate fashion output from input images with background array configuration.
+    
+    Args:
+        background_tasks: FastAPI background tasks handler
+        request: Request containing JSON data with background array configuration
+        
+    Returns:
+        GenerationResponse with status and file URLs
+    """
+    try:
+        # Parse JSON data from request
+        json_data = await request.json()
+        generation_request = GenerationRequest(**json_data)
+        
+        # Extract gender parameter with validation
+        gender = generation_request.gender if hasattr(generation_request, 'gender') else None
+        if gender and gender.lower() not in ['male', 'female']:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid gender parameter. Must be 'male' or 'female'."
+            )
+        
+        # Extract upscale parameter (default to True)
+        upscale = getattr(generation_request, 'upscale', True)
+        
+        # Generate a unique request ID
+        request_id = str(uuid.uuid4())
+        
+        # Download images from URLs and save them
+        saved_paths_dict = {}
+        background_config = {}
+        
+        for input_image in generation_request.inputImages:
+            # Download image from URL
+            import requests
+            response = requests.get(input_image.url)
+            response.raise_for_status()
+            
+            # Save image to temporary location using existing settings
+            temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            image_path = temp_dir / f"{input_image.view}.jpg"
+            
+            with open(image_path, "wb") as f:
+                f.write(response.content)
+            
+            saved_paths_dict[input_image.view] = str(image_path)
+            background_config[input_image.view] = input_image.backgrounds
+        
+        # Schedule cleanup of temporary files
+        background_tasks.add_task(cleanup_temp_files, request_id)
+        
+        # Process through workflow manager with background array support
+        logger.info(f"Starting workflow process with background array for request_id: {request_id}")
+        result = await workflow_manager.process_request_with_background_array(
+            image_paths=saved_paths_dict,
+            background_config=background_config,
+            text_description=generation_request.text,
+            request_id=request_id,
+            username="api_user",  # Default username for API requests
+            product=generation_request.productType,
+            isVideo=generation_request.isVideo,
+            number_of_outputs=generation_request.numberOfOutputs,
+            aspect_ratio="9:16",  # Default aspect ratio
+            gender=gender,  # Pass gender parameter
+            upscale=upscale  # Pass upscale parameter
+        )
+        
+        logger.info(f"Workflow completed for request_id: {request_id}")
+        logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
+        
+        # Ensure we have the required fields
+        output_image_url = result.get("output_image_url") or ""
+        excel_report_url = result.get("excel_report_url") or ""
+        
+        if not output_image_url:
+            logger.warning(f"No output_image_url in result for {request_id}")
+        if not excel_report_url:
+            logger.warning(f"No excel_report_url in result for {request_id}")
+        
+        response = GenerationResponse(
+            request_id=request_id,
+            output_image_url=output_image_url,
+            image_variations=result.get("image_variations", []),
+            output_video_url=result.get("output_video_url"),
+            excel_report_url=excel_report_url,
+            metadata=result.get("metadata", {})
+        )
+        
+        logger.info(f"Returning response for {request_id}: {type(response)}")
+        return response
+        
+    except HTTPException as e:
+        # Re-raise HTTP exceptions
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during generation: {str(e)}"
+        )
+
+@router.post(
     "/generate",
     response_model=GenerationResponse,
     responses={
@@ -32,7 +146,8 @@ async def generate_fashion(
     isVideo: bool = Form(False, description="Whether to generate a video"),
     numberOfOutputs: int = Form(1, description="Number of image outputs to generate (1-4)", ge=1, le=4),
     aspectRatio: str = Form("9:16", description="Aspect ratio for generated images", example="9:16"),
-    gender: str = Form(None, description="Gender of the model to display clothing on (male/female)"),  # Add gender parameter
+    gender: str = Form(None, description="Gender of the model to display clothing on (male/female)"),
+    upscale: bool = Form(True, description="Whether to upscale generated images"),
     frontside: UploadFile = File(..., description="Front side image of the fashion item."),
     backside: Optional[UploadFile] = File(None, description="Back side image of the fashion item."),
     sideview: Optional[UploadFile] = File(None, description="Side view image of the fashion item."),
@@ -47,6 +162,7 @@ async def generate_fashion(
         images: List of image files to process
         text: Text description or instructions
         gender: Gender of the model to display clothing on (male/female)
+        upscale: Whether to upscale generated images
         
     Returns:
         GenerationResponse with status and file URLs
@@ -118,117 +234,8 @@ async def generate_fashion(
             isVideo=isVideo,
             number_of_outputs=numberOfOutputs,
             aspect_ratio=aspectRatio,
-            gender=gender  # Pass gender parameter
-        )
-        
-        logger.info(f"Workflow completed for request_id: {request_id}")
-        logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
-        
-        # Ensure we have the required fields
-        output_image_url = result.get("output_image_url") or ""
-        excel_report_url = result.get("excel_report_url") or ""
-        
-        if not output_image_url:
-            logger.warning(f"No output_image_url in result for {request_id}")
-        if not excel_report_url:
-            logger.warning(f"No excel_report_url in result for {request_id}")
-        
-        response = GenerationResponse(
-            request_id=request_id,
-            output_image_url=output_image_url,
-            image_variations=result.get("image_variations", []),
-            output_video_url=result.get("output_video_url"),
-            excel_report_url=excel_report_url,
-            metadata=result.get("metadata", {})
-        )
-        
-        logger.info(f"Returning response for {request_id}: {type(response)}")
-        return response
-        
-    except HTTPException as e:
-        # Re-raise HTTP exceptions
-        raise e
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"An error occurred during generation: {str(e)}"
-        )
-
-@router.post(
-    "/generate-with-background-array",
-    response_model=GenerationResponse,
-    responses={
-        400: {"model": ErrorResponse},
-        500: {"model": ErrorResponse}
-    }
-)
-async def generate_fashion_with_background_array(
-    background_tasks: BackgroundTasks,
-    request: Request
-):
-    """
-    Generate fashion output from input images with background array configuration.
-    
-    Args:
-        background_tasks: FastAPI background tasks handler
-        request: Request containing JSON data with background array configuration
-        
-    Returns:
-        GenerationResponse with status and file URLs
-    """
-    try:
-        # Parse JSON data from request
-        json_data = await request.json()
-        generation_request = GenerationRequest(**json_data)
-        
-        # Extract gender parameter with validation
-        gender = generation_request.gender if hasattr(generation_request, 'gender') else None
-        if gender and gender.lower() not in ['male', 'female']:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid gender parameter. Must be 'male' or 'female'."
-            )
-        
-        # Generate a unique request ID
-        request_id = str(uuid.uuid4())
-        
-        # Download images from URLs and save them
-        saved_paths_dict = {}
-        background_config = {}
-        
-        for input_image in generation_request.inputImages:
-            # Download image from URL
-            import requests
-            response = requests.get(input_image.url)
-            response.raise_for_status()
-            
-            # Save image to temporary location using existing settings
-            temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            image_path = temp_dir / f"{input_image.view}.jpg"
-            
-            with open(image_path, "wb") as f:
-                f.write(response.content)
-            
-            saved_paths_dict[input_image.view] = str(image_path)
-            background_config[input_image.view] = input_image.backgrounds
-        
-        # Schedule cleanup of temporary files
-        background_tasks.add_task(cleanup_temp_files, request_id)
-        
-        # Process through workflow manager with background array support
-        logger.info(f"Starting workflow process with background array for request_id: {request_id}")
-        result = await workflow_manager.process_request_with_background_array(
-            image_paths=saved_paths_dict,
-            background_config=background_config,
-            text_description=generation_request.text,
-            request_id=request_id,
-            username="api_user",  # Default username for API requests
-            product=generation_request.productType,
-            isVideo=generation_request.isVideo,
-            number_of_outputs=generation_request.numberOfOutputs,
-            aspect_ratio="9:16",  # Default aspect ratio
-            gender=gender  # Pass gender parameter
+            gender=gender,  # Pass gender parameter
+            upscale=upscale  # Pass upscale parameter
         )
         
         logger.info(f"Workflow completed for request_id: {request_id}")

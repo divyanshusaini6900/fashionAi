@@ -12,6 +12,7 @@ from app.core.config import settings
 from app.services.image_generator import ImageGenerator
 from app.services.video_generator import VideoGenerator
 from app.services.excel_generator import ExcelGenerator
+from app.services.image_upscaler import ImageUpscaler  # Add this import
 from app.utils.file_helpers import (
     save_generated_image,
     save_generated_video,
@@ -35,6 +36,7 @@ class WorkflowManager:
         self.image_generator = ImageGenerator()
         self.video_generator = VideoGenerator()
         self.excel_generator = ExcelGenerator()
+        self.image_upscaler = ImageUpscaler()  # Add upscaler service
         
         # Initialize text analysis clients based on configuration
         if settings.USE_GEMINI_FOR_TEXT:
@@ -394,7 +396,8 @@ CRITICAL:
         isVideo: bool = False,
         number_of_outputs: int = 1,
         aspect_ratio: str = "9:16",
-        gender: str = None  # Add gender parameter
+        gender: str = None,  # Add gender parameter
+        upscale: bool = True  # Add upscale parameter
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation with background array support.
@@ -408,6 +411,7 @@ CRITICAL:
             number_of_outputs: Number of image variations to generate (default: 1)
             aspect_ratio: Aspect ratio for generated images (default: "9:16")
             gender: Gender of the model to display clothing on (male/female)
+            upscale: Whether to upscale generated images (default: True)
             
         Returns:
             Dictionary containing URLs to generated files and metadata
@@ -437,7 +441,23 @@ CRITICAL:
             if not primary_image_bytes:
                 raise ValueError("Failed to generate a primary image.")
 
-            # 3. Save all image variations and get their URLs
+            # 3. Upscale images if requested
+            if upscale:
+                logger.info("Upscaling generated images...")
+                # Upscale primary image
+                upscaled_primary_bytes = self.image_upscaler.upscale_image_bytes(primary_image_bytes)
+                if upscaled_primary_bytes:
+                    primary_image_bytes = upscaled_primary_bytes
+                    logger.info("Primary image upscaled successfully")
+                
+                # Upscale all variations
+                for key, image_bytes in all_variations_bytes_dict.items():
+                    upscaled_bytes = self.image_upscaler.upscale_image_bytes(image_bytes)
+                    if upscaled_bytes:
+                        all_variations_bytes_dict[key] = upscaled_bytes
+                        logger.info(f"Variation {key} upscaled successfully")
+
+            # 4. Save all image variations and get their URLs
             # The function now expects a dictionary of bytes
             variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
             
@@ -459,7 +479,7 @@ CRITICAL:
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
             }
 
-            # 4. Generate and save video if requested (using primary image)
+            # 5. Generate and save video if requested (using primary image)
             video_url = None
             if isVideo:
                 try:
@@ -474,7 +494,7 @@ CRITICAL:
                 except Exception as e:
                     logger.error("Video generation failed, continuing without video.", exc_info=True)
             
-            # 5. Create an Excel report from the detailed product data
+            # 6. Create an Excel report from the detailed product data
             try:
                 logger.info("Creating Excel report...")
                 logger.info(f"Product data for Excel: {product_data}")
@@ -488,7 +508,7 @@ CRITICAL:
                     video_url=video_url
                 )
                 
-                # 6. Save the Excel report and get its URL
+                # 7. Save the Excel report and get its URL
                 excel_url = save_excel_report(excel_bytes, request_id)
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
@@ -500,7 +520,8 @@ CRITICAL:
                     "metadata": {
                         "analysis": analysis_json,
                         "request_id": request_id,
-                        "total_variations": len(variation_urls_dict)
+                        "total_variations": len(variation_urls_dict),
+                        "upscaled": upscale
                     }
                 }
             except Exception as excel_error:
@@ -526,7 +547,8 @@ CRITICAL:
         isVideo: bool = False,
         number_of_outputs: int = 1,
         aspect_ratio: str = "9:16",
-        gender: str = None  # Add gender parameter
+        gender: str = None,  # Add gender parameter
+        upscale: bool = True  # Add upscale parameter
     ) -> Dict:
         """
         Orchestrates the full process from analysis to generation.
@@ -539,6 +561,7 @@ CRITICAL:
             number_of_outputs: Number of image variations to generate (default: 1)
             aspect_ratio: Aspect ratio for generated images (default: "9:16")
             gender: Gender of the model to display clothing on (male/female)
+            upscale: Whether to upscale generated images (default: True)
             
         Returns:
             Dictionary containing URLs to generated files and metadata
@@ -567,7 +590,23 @@ CRITICAL:
             if not primary_image_bytes:
                 raise ValueError("Failed to generate a primary image.")
 
-            # 3. Save all image variations and get their URLs
+            # 3. Upscale images if requested
+            if upscale:
+                logger.info("Upscaling generated images...")
+                # Upscale primary image
+                upscaled_primary_bytes = self.image_upscaler.upscale_image_bytes(primary_image_bytes)
+                if upscaled_primary_bytes:
+                    primary_image_bytes = upscaled_primary_bytes
+                    logger.info("Primary image upscaled successfully")
+                
+                # Upscale all variations
+                for key, image_bytes in all_variations_bytes_dict.items():
+                    upscaled_bytes = self.image_upscaler.upscale_image_bytes(image_bytes)
+                    if upscaled_bytes:
+                        all_variations_bytes_dict[key] = upscaled_bytes
+                        logger.info(f"Variation {key} upscaled successfully")
+
+            # 4. Save all image variations and get their URLs
             # The function now expects a dictionary of bytes
             variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
             
@@ -582,7 +621,7 @@ CRITICAL:
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
             }
 
-            # 4. Generate and save video if requested (using primary image)
+            # 5. Generate and save video if requested (using primary image)
             video_url = None
             if isVideo:
                 try:
@@ -597,7 +636,7 @@ CRITICAL:
                 except Exception as e:
                     logger.error("Video generation failed, continuing without video.", exc_info=True)
             
-            # 5. Create an Excel report from the detailed product data
+            # 6. Create an Excel report from the detailed product data
             try:
                 logger.info("Creating Excel report...")
                 logger.info(f"Product data for Excel: {product_data}")
@@ -611,7 +650,7 @@ CRITICAL:
                     video_url=video_url
                 )
                 
-                # 6. Save the Excel report and get its URL
+                # 7. Save the Excel report and get its URL
                 excel_url = save_excel_report(excel_bytes, request_id)
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
@@ -623,7 +662,8 @@ CRITICAL:
                     "metadata": {
                         "analysis": analysis_json,
                         "request_id": request_id,
-                        "total_variations": len(variation_urls_dict)
+                        "total_variations": len(variation_urls_dict),
+                        "upscaled": upscale
                     }
                 }
             except Exception as excel_error:

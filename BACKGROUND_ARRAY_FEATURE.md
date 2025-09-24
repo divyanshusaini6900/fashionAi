@@ -42,7 +42,7 @@ Each view can have a background array with 3 integers: `[white_count, plain_coun
 
 ### New Endpoint
 ```
-POST /api/v1/generate-with-background-array
+POST /api/v1/generate/image
 ```
 
 ### Request Format

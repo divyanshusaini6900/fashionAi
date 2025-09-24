@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for the background array feature with single view image
+Test script for image generation with upscaling
 """
 import requests
 import json
@@ -9,8 +9,8 @@ import json
 BASE_URL = "http://127.0.0.1:8000"
 ENDPOINT = "/api/v1/generate/image"
 
-def test_background_array_feature():
-    """Test the background array feature with single view image"""
+def test_image_generation_with_upscale():
+    """Test image generation with upscaling enabled"""
     
     # Test data with background arrays for single view
     test_data = {
@@ -18,21 +18,20 @@ def test_background_array_feature():
             {
                 "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-19%20at%2012.36.01_0cca7d65.jpg?alt=media&token=704093fa-6d46-4006-a459-ed995cb423a2",
                 "view": "front",
-                "backgrounds": [0, 0, 1]  # 1 white, 0 plain, 0 random
+                "backgrounds": [0, 0, 1]  # 1 random background
             }
         ],
         "productType": "general",
         "gender": "male",
         "text": "Top",
         "isVideo": False,
-        "upscale": True,
+        "upscale": True,  # Enable upscaling
         "numberOfOutputs": 1,
         "generateCsv": True,
-        # "aspectRatio": "16:9"
     }
     
     try:
-        print("🚀 Sending Request to API with Background Array (Single View)")
+        print("🚀 Sending Request to API for Image Generation with Upscaling")
         print("=" * 60)
         print("📝 REQUEST DETAILS:")
         print(f"   URL: {BASE_URL}{ENDPOINT}")
@@ -75,6 +74,13 @@ def test_background_array_feature():
             else:
                 print(f"   ℹ️ No image variations generated")
                 
+            # Check if images were upscaled
+            metadata = response_data.get('metadata', {})
+            if metadata.get('upscaled'):
+                print(f"   🔍 Images were upscaled: ✅")
+            else:
+                print(f"   🔍 Images were upscaled: ❌")
+                
             if 'excel_report_url' in response_data and response_data['excel_report_url']:
                 print(f"   📊 Excel Report: {response_data['excel_report_url']}")
             else:
@@ -108,10 +114,10 @@ def test_background_array_feature():
         return False
 
 if __name__ == "__main__":
-    print("🧪 Testing FashionModelingAI Background Array Feature (Single View)")
+    print("🧪 Testing FashionModelingAI Image Generation with Upscaling")
     print("=" * 60)
     
     # Test with single view image
-    success = test_background_array_feature()
+    success = test_image_generation_with_upscale()
     
     print(f"\n{'✅ TEST PASSED' if success else '❌ TEST FAILED'}")

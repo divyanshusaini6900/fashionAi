@@ -7,7 +7,7 @@ import json
 
 # Configuration
 BASE_URL = "http://127.0.0.1:8000"
-ENDPOINT = "/api/v1/generate-with-background-array"
+ENDPOINT = "/api/v1/generate/image"
 
 def test_male_model():
     """Test the gender feature with male model"""
