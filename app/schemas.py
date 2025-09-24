@@ -2,13 +2,20 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+class InputImage(BaseModel):
+    url: str
+    view: str
+    backgrounds: List[int] = [0, 0, 1]  # Default to [0, 0, 1] as requested
+
 class GenerationRequest(BaseModel):
+    inputImages: List[InputImage]
+    productType: str
+    gender: str
     text: str
-    username: str
-    product: str
-    generate_video: bool = False
+    isVideo: bool = False
+    upscale: bool = True
     numberOfOutputs: int = 1
-    aspectRatio: str = "9:16"
+    generateCsv: bool = True
 
 class GenerationResult(BaseModel):
     output_image_url: Optional[str] = None

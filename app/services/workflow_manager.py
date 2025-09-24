@@ -383,6 +383,136 @@ CRITICAL:
             # Re-raise the exception to be caught by the main workflow handler
             raise ValueError(f"Failed during OpenAI analysis: {e}")
         
+    async def process_request_with_background_array(
+        self,
+        image_paths: Dict[str, str],
+        background_config: Dict[str, List[int]],  # {view: [white_count, plain_count, random_count]}
+        text_description: str,
+        request_id: str,
+        username: str,
+        product: str,
+        isVideo: bool = False,
+        number_of_outputs: int = 1,
+        aspect_ratio: str = "9:16"
+    ) -> Dict:
+        """
+        Orchestrates the full process from analysis to generation with background array support.
+        
+        Args:
+            image_paths: Dictionary of paths to input images, keyed by view name
+            background_config: Dictionary mapping views to background arrays [white, plain, random]
+            text_description: Text description of the product
+            request_id: Unique identifier for this request
+            isVideo: Whether to generate a video (default: False)
+            number_of_outputs: Number of image variations to generate (default: 1)
+            aspect_ratio: Aspect ratio for generated images (default: "9:16")
+            
+        Returns:
+            Dictionary containing URLs to generated files and metadata
+        """
+        try:
+            logger.info(f"Starting workflow with background array for request_id: {request_id}")
+            
+            # 1. Analyze inputs with AI to get detailed JSON
+            if settings.USE_GEMINI_FOR_TEXT:
+                analysis_json = await self._analyze_with_gemini(image_paths, text_description, username, product)
+            else:
+                analysis_json = await self._analyze_with_openai(image_paths, text_description, username, product)
+            
+            product_data = analysis_json.get("product_data", {})
+            image_analysis = analysis_json.get("image_analysis", {})
+
+            # 2. Generate lifestyle images based on the analysis and background arrays
+            primary_image_bytes, all_variations_bytes_dict = await self.image_generator.generate_images_with_background_array(
+                product_data=product_data,
+                reference_image_paths_dict=image_paths,
+                background_config=background_config,
+                number_of_outputs=number_of_outputs,
+                aspect_ratio=aspect_ratio
+            )
+
+            if not primary_image_bytes:
+                raise ValueError("Failed to generate a primary image.")
+
+            # 3. Save all image variations and get their URLs
+            # The function now expects a dictionary of bytes
+            variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+            
+            # The primary image URL is the first frontside image, or the first one saved.
+            primary_image_url = None
+            for key, url in variation_urls_dict.items():
+                if key.startswith("frontside"):
+                    primary_image_url = url
+                    break
+            
+            if not primary_image_url:
+                primary_image_url = next(iter(variation_urls_dict.values()), None)
+
+            if not primary_image_url:
+                raise ValueError("Failed to obtain a primary image URL after saving.")
+
+            # Get additional variations (excluding primary image's URL if it's in the dict)
+            additional_variations_dict = {
+                view: url for view, url in variation_urls_dict.items() if url != primary_image_url
+            }
+
+            # 4. Generate and save video if requested (using primary image)
+            video_url = None
+            if isVideo:
+                try:
+                    logger.info("Starting video generation...")
+                    # Use the primary generated image URL as input for video generation
+                    video_bytes = await self.video_generator.isVideo(
+                        image_path=primary_image_url,
+                        product_data=product_data
+                    )
+                    video_url = save_generated_video(video_bytes, request_id)
+                    logger.info(f"Video generation successful. URL: {video_url}")
+                except Exception as e:
+                    logger.error("Video generation failed, continuing without video.", exc_info=True)
+            
+            # 5. Create an Excel report from the detailed product data
+            try:
+                logger.info("Creating Excel report...")
+                logger.info(f"Product data for Excel: {product_data}")
+                logger.info(f"Primary image URL: {primary_image_url}")
+                logger.info(f"Variation URLs: {additional_variations_dict}")
+                
+                excel_bytes = self.excel_generator.create_report(
+                    product_data=product_data,
+                    image_url=primary_image_url,
+                    variation_urls=additional_variations_dict,
+                    video_url=video_url
+                )
+                
+                # 6. Save the Excel report and get its URL
+                excel_url = save_excel_report(excel_bytes, request_id)
+                logger.info(f"Excel report saved successfully: {excel_url}")
+                
+                return {
+                    "output_image_url": primary_image_url,
+                    "image_variations": list(additional_variations_dict.values()),
+                    "output_video_url": video_url,
+                    "excel_report_url": excel_url,
+                    "metadata": {
+                        "analysis": analysis_json,
+                        "request_id": request_id,
+                        "total_variations": len(variation_urls_dict)
+                    }
+                }
+            except Exception as excel_error:
+                logger.error(f"Excel generation failed: {str(excel_error)}", exc_info=True)
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate Excel report: {str(excel_error)}"
+                )
+        except Exception as e:
+            logger.error(f"Workflow failed for request {request_id}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"An error occurred in the processing workflow: {str(e)}"
+            )
+
     async def process_request(
         self,
         image_paths: Dict[str, str],
@@ -390,7 +520,7 @@ CRITICAL:
         request_id: str,
         username: str,
         product: str,
-        generate_video: bool = False,
+        isVideo: bool = False,
         number_of_outputs: int = 1,
         aspect_ratio: str = "9:16"
     ) -> Dict:
@@ -401,7 +531,7 @@ CRITICAL:
             image_paths: Dictionary of paths to input images, keyed by view name
             text_description: Text description of the product
             request_id: Unique identifier for this request
-            generate_video: Whether to generate a video (default: False)
+            isVideo: Whether to generate a video (default: False)
             number_of_outputs: Number of image variations to generate (default: 1)
             aspect_ratio: Aspect ratio for generated images (default: "9:16")
             
@@ -448,11 +578,11 @@ CRITICAL:
 
             # 4. Generate and save video if requested (using primary image)
             video_url = None
-            if generate_video:
+            if isVideo:
                 try:
                     logger.info("Starting video generation...")
                     # Use the primary generated image URL as input for video generation
-                    video_bytes = await self.video_generator.generate_video(
+                    video_bytes = await self.video_generator.isVideo(
                         image_path=primary_image_url,
                         product_data=product_data
                     )

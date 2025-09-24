@@ -56,7 +56,7 @@ class VideoGenerator:
             print(f"Error converting image to data URL: {e}")
             raise
 
-    async def _generate_video_with_gemini(
+    async def _isVideo_with_gemini(
         self,
         image_path: str,
         prompt: str
@@ -83,7 +83,7 @@ class VideoGenerator:
             
             # Step 2: Generate video with Veo 3 using the input image
             operation = await asyncio.to_thread(
-                self.gemini_client.models.generate_videos,
+                self.gemini_client.models.isVideos,
                 model="veo-3.0-generate-001",
                 prompt=prompt,
                 image=image,
@@ -119,7 +119,7 @@ class VideoGenerator:
             print(f"Gemini video generation failed: {str(e)}")
             raise
 
-    async def _generate_video_with_replicate(
+    async def _isVideo_with_replicate(
         self,
         image_path: str,
         prompt: str,
@@ -159,7 +159,7 @@ class VideoGenerator:
             print(f"Replicate video generation failed: {str(e)}")
             raise
 
-    async def generate_video(
+    async def isVideo(
         self,
         image_path: str,
         product_data: Dict,
@@ -194,12 +194,12 @@ class VideoGenerator:
             # Choose API based on configuration
             if settings.USE_GEMINI_FOR_VIDEOS:
                 try:
-                    return await self._generate_video_with_gemini(image_path, prompt)
+                    return await self._isVideo_with_gemini(image_path, prompt)
                 except Exception as e:
                     print(f"Gemini video generation failed, falling back to Replicate: {e}")
-                    return await self._generate_video_with_replicate(image_path, prompt, video_length)
+                    return await self._isVideo_with_replicate(image_path, prompt, video_length)
             else:
-                return await self._generate_video_with_replicate(image_path, prompt, video_length)
+                return await self._isVideo_with_replicate(image_path, prompt, video_length)
             
         except Exception as e:
             print(f"Video generation failed: {str(e)}")

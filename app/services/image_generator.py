@@ -280,6 +280,115 @@ CRITICAL REQUIREMENTS:
         
         return None
 
+    async def generate_images_with_background_array(
+        self,
+        product_data: Dict,
+        reference_image_paths_dict: Dict[str, str],
+        background_config: Dict[str, List[int]],  # {view: [white_count, plain_count, random_count]}
+        number_of_outputs: int = 1,
+        aspect_ratio: str = "9:16"
+    ) -> Tuple[Optional[bytes], Dict[str, bytes]]:
+        """
+        Generates images for different views with specific background requirements based on background arrays.
+        
+        Args:
+            product_data: Product information for prompt generation
+            reference_image_paths_dict: Dictionary of reference image paths by view
+            background_config: Dictionary mapping views to background arrays [white, plain, random]
+            number_of_outputs: Number of outputs (kept for compatibility)
+            aspect_ratio: Aspect ratio for generated images
+            
+        Returns:
+            Tuple of (primary_image_bytes, dictionary_of_all_variations).
+        """
+        if not reference_image_paths_dict:
+            raise ValueError("At least one reference image is required.")
+
+        all_variations: Dict[str, bytes] = {}
+        
+        # The detail view, if present, should be used as a high-quality reference for all generations.
+        detail_view_path = reference_image_paths_dict.get("detailview")
+
+        # Generate images for each view according to its background array
+        for view, background_array in background_config.items():
+            if view not in reference_image_paths_dict:
+                continue
+                
+            white_count, plain_count, random_count = background_array
+            view_path = reference_image_paths_dict[view]
+            
+            # Use the specific view image and the detail view (if available) as references.
+            reference_images = [view_path]
+            if detail_view_path:
+                reference_images.append(detail_view_path)
+            
+            # Generate white background images
+            for i in range(white_count):
+                prompt = self._create_generation_prompt(
+                    product_data, 
+                    f"{view} view in a clean white studio background", 
+                    aspect_ratio
+                )
+                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
+                if image_bytes:
+                    all_variations[f"{view}_white_{i+1}"] = image_bytes
+
+            # Generate plain background images (non-white)
+            for i in range(plain_count):
+                prompt = self._create_generation_prompt(
+                    product_data, 
+                    f"{view} view in a plain colored background", 
+                    aspect_ratio
+                )
+                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
+                if image_bytes:
+                    all_variations[f"{view}_plain_{i+1}"] = image_bytes
+
+            # Generate random lifestyle background images
+            occasions = [
+                "modern urban cafe with natural lighting",
+                "peaceful garden setting with soft sunlight",
+                "contemporary living room with large windows",
+                "elegant evening party venue with warm lighting",
+                "upscale rooftop lounge at sunset",
+                "luxurious indoor party setting with ambient lighting",
+                "grand wedding venue with decorative elements",
+                "outdoor garden wedding setup",
+                "elegant ballroom with chandeliers",
+                "scenic beach during golden hour",
+                "tropical resort poolside",
+                "beachfront terrace with ocean view",
+                "sophisticated hotel lobby",
+                "upscale restaurant interior",
+                "classic architectural backdrop"
+            ]
+            
+            for i in range(min(random_count, len(occasions))):
+                occasion = occasions[i]
+                prompt = self._create_generation_prompt(
+                    product_data, 
+                    f"{view} view in a {occasion}", 
+                    aspect_ratio
+                )
+                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
+                if image_bytes:
+                    all_variations[f"{view}_random_{i+1}"] = image_bytes
+
+        if not all_variations:
+            raise ValueError("Image generation failed to produce any variations.")
+        
+        # The first frontside image is the primary. Fallback to any other image if not present.
+        primary_image = None
+        for key in all_variations:
+            if key.startswith("frontside"):
+                primary_image = all_variations[key]
+                break
+        
+        if not primary_image:
+            primary_image = next(iter(all_variations.values()), None)
+        
+        return primary_image, all_variations
+
     async def generate_images(
         self,
         product_data: Dict,

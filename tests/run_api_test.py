@@ -12,7 +12,7 @@
     text_input = "woman dress, stylish, elegant, event wear"
     username = "Mene"  # Using your name
     product = "lengha"
-    generate_video = "false"  # Set to "true" to test video generation (takes longer)
+    isVideo = "false"  # Set to "true" to test video generation (takes longer)
     
     # 2. Prepare the image files for the multipart/form-data request
     image_definitions = {
@@ -57,7 +57,7 @@
                 "text": text_input,
                 "username": username,
                 "product": product,
-                "generate_video": generate_video
+                "isVideo": isVideo
             },
             timeout=600  # Increased timeout for video generation
         )

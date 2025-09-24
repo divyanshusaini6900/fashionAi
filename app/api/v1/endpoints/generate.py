@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
 from typing import List, Optional, Dict
 import uuid
 import os
@@ -6,8 +6,9 @@ import logging
 from pathlib import Path
 from app.core.config import settings
 from app.utils.file_helpers import save_upload_files, cleanup_temp_files
-from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, GenerationResult, FileAccessResponse
+from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, GenerationResult, FileAccessResponse, GenerationRequest
 from app.services.workflow_manager import WorkflowManager
+import json
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ async def generate_fashion(
     text: str = Form(..., description="Text description or instructions"),
     username: str = Form(..., description="Username for SKU ID generation"),
     product: str = Form(..., description="Product name for SKU ID generation"),
-    generate_video: bool = Form(False, description="Whether to generate a video"),
+    isVideo: bool = Form(False, description="Whether to generate a video"),
     numberOfOutputs: int = Form(1, description="Number of image outputs to generate (1-4)", ge=1, le=4),
     aspectRatio: str = Form("9:16", description="Aspect ratio for generated images", example="9:16"),
     frontside: UploadFile = File(..., description="Front side image of the fashion item."),
@@ -105,9 +106,110 @@ async def generate_fashion(
             request_id=request_id,
             username=username,
             product=product,
-            generate_video=generate_video,
+            isVideo=isVideo,
             number_of_outputs=numberOfOutputs,
             aspect_ratio=aspectRatio
+        )
+        
+        logger.info(f"Workflow completed for request_id: {request_id}")
+        logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
+        
+        # Ensure we have the required fields
+        output_image_url = result.get("output_image_url") or ""
+        excel_report_url = result.get("excel_report_url") or ""
+        
+        if not output_image_url:
+            logger.warning(f"No output_image_url in result for {request_id}")
+        if not excel_report_url:
+            logger.warning(f"No excel_report_url in result for {request_id}")
+        
+        response = GenerationResponse(
+            request_id=request_id,
+            output_image_url=output_image_url,
+            image_variations=result.get("image_variations", []),
+            output_video_url=result.get("output_video_url"),
+            excel_report_url=excel_report_url,
+            metadata=result.get("metadata", {})
+        )
+        
+        logger.info(f"Returning response for {request_id}: {type(response)}")
+        return response
+        
+    except HTTPException as e:
+        # Re-raise HTTP exceptions
+        raise e
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred during generation: {str(e)}"
+        )
+
+@router.post(
+    "/generate-with-background-array",
+    response_model=GenerationResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        500: {"model": ErrorResponse}
+    }
+)
+async def generate_fashion_with_background_array(
+    background_tasks: BackgroundTasks,
+    request: Request
+):
+    """
+    Generate fashion output from input images with background array configuration.
+    
+    Args:
+        background_tasks: FastAPI background tasks handler
+        request: Request containing JSON data with background array configuration
+        
+    Returns:
+        GenerationResponse with status and file URLs
+    """
+    try:
+        # Parse JSON data from request
+        json_data = await request.json()
+        generation_request = GenerationRequest(**json_data)
+        
+        # Generate a unique request ID
+        request_id = str(uuid.uuid4())
+        
+        # Download images from URLs and save them
+        saved_paths_dict = {}
+        background_config = {}
+        
+        for input_image in generation_request.inputImages:
+            # Download image from URL
+            import requests
+            response = requests.get(input_image.url)
+            response.raise_for_status()
+            
+            # Save image to temporary location using existing settings
+            temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            image_path = temp_dir / f"{input_image.view}.jpg"
+            
+            with open(image_path, "wb") as f:
+                f.write(response.content)
+            
+            saved_paths_dict[input_image.view] = str(image_path)
+            background_config[input_image.view] = input_image.backgrounds
+        
+        # Schedule cleanup of temporary files
+        background_tasks.add_task(cleanup_temp_files, request_id)
+        
+        # Process through workflow manager with background array support
+        logger.info(f"Starting workflow process with background array for request_id: {request_id}")
+        result = await workflow_manager.process_request_with_background_array(
+            image_paths=saved_paths_dict,
+            background_config=background_config,
+            text_description=generation_request.text,
+            request_id=request_id,
+            username="api_user",  # Default username for API requests
+            product=generation_request.productType,
+            isVideo=generation_request.isVideo,
+            number_of_outputs=generation_request.numberOfOutputs,
+            aspect_ratio="9:16"  # Default aspect ratio
         )
         
         logger.info(f"Workflow completed for request_id: {request_id}")
