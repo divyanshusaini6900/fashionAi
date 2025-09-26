@@ -67,6 +67,19 @@ source fash_env/bin/activate
 pip install -r requirements.txt
 ```
 
+### Step 5.1: Download AI Models (For Image Upscaling)
+If you're using image upscaling features, pre-download the AI models:
+
+```bash
+# Activate virtual environment
+source fash_env/bin/activate
+
+# Run the model download script
+python download_realesrgan_models.py
+```
+
+This step is important because the VM might have network restrictions that prevent automatic model downloads during runtime.
+
 ### Step 6: Restart the Service
 After updating the code, restart your application service:
 
@@ -156,6 +169,34 @@ pip install -r requirements.txt
 pip install package-name
 ```
 
+### Issue 5: Image Upscaling Not Working
+If image upscaling is not working on the VM but works locally:
+
+1. Check if the Real-ESRGAN models are downloaded:
+   ```bash
+   # Run the model download script
+   python download_realesrgan_models.py
+   ```
+
+2. Check permissions for the cache directory:
+   ```bash
+   # Check if the user can write to cache directories
+   ls -la ~/.cache/
+   
+   # Fix permissions if needed
+   sudo chown -R $USER:$USER ~/.cache/
+   ```
+
+3. Check network connectivity to GitHub:
+   ```bash
+   curl -I https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+   ```
+
+4. Check application logs for specific errors:
+   ```bash
+   sudo journalctl -u fashion_ai --no-pager | grep -i "upscal"
+   ```
+
 ## Best Practices
 
 ### 1. Always Test Locally First
@@ -236,6 +277,8 @@ After updating your VM repository:
 - [ ] New features work as expected
 - [ ] No errors in logs (`sudo journalctl -u fashion_ai -f`)
 - [ ] Performance is acceptable
+- [ ] Image upscaling functionality works (if applicable)
+- [ ] AI models are properly downloaded and accessible
 
 ## Troubleshooting Tips
 
@@ -260,6 +303,15 @@ After updating your VM repository:
    source fash_env/bin/activate
    pip list
    pip install -r requirements.txt
+   ```
+
+4. **If image upscaling is not working:**
+   ```bash
+   # Test the image upscaler directly
+   python test_image_upscaler.py
+   
+   # Check if models are downloaded
+   python download_realesrgan_models.py
    ```
 
 ## Need Help?

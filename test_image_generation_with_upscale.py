@@ -6,7 +6,7 @@ import requests
 import json
 
 # Configuration
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://localhost:8000"
 ENDPOINT = "/api/v1/generate/image"
 
 def test_image_generation_with_upscale():
@@ -18,7 +18,7 @@ def test_image_generation_with_upscale():
             {
                 "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/2.jpg?alt=media&token=a72c17d5-c84e-4509-a6e3-cf4a52be61e6",
                 "view": "front",
-                "backgrounds": [0, 0, 1]  # 1 random background
+                "backgrounds": [0, 1, 0]  # 1 random background
             }
         ],
         "productType": "general",
@@ -43,7 +43,7 @@ def test_image_generation_with_upscale():
         response = requests.post(
             f"{BASE_URL}{ENDPOINT}",
             json=test_data,
-            timeout=180  # 3 minutes timeout
+            timeout=800  # 3 minutes timeout
         )
         
         # Process response
