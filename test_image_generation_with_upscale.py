@@ -16,7 +16,7 @@ def test_image_generation_with_upscale():
     test_data = {
         "inputImages": [
             {
-                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/2.jpg?alt=media&token=a72c17d5-c84e-4509-a6e3-cf4a52be61e6",
+                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-19%20at%2011.35.31_d5ceb091.jpg?alt=media&token=ee5c5967-37c6-456a-9de0-02bd93689ae3",
                 "view": "front",
                 "backgrounds": [0, 1, 0]  # 1 random background
             }
@@ -61,11 +61,6 @@ def test_image_generation_with_upscale():
             print(f"\n📄 Summary:")
             print(f"   Request ID: {response_data.get('request_id', 'N/A')}")
             
-            if 'output_image_url' in response_data and response_data['output_image_url']:
-                print(f"   ✅ Primary Image: {response_data['output_image_url']}")
-            else:
-                print(f"   ⚠️ No primary image generated")
-                
             # Show all image variations
             if 'image_variations' in response_data and response_data['image_variations']:
                 print(f"   🖼️ Image Variations ({len(response_data['image_variations'])} found):")
@@ -74,12 +69,20 @@ def test_image_generation_with_upscale():
             else:
                 print(f"   ℹ️ No image variations generated")
                 
+            # Show all upscaled images
+            if 'upscale_image' in response_data and response_data['upscale_image']:
+                print(f"   🔍 Upscaled Images ({len(response_data['upscale_image'])} found):")
+                for i, upscaled in enumerate(response_data['upscale_image'], 1):
+                    print(f"     {i}. {upscaled}")
+            else:
+                print(f"   ℹ️ No upscaled images generated")
+                
             # Check if images were upscaled
             metadata = response_data.get('metadata', {})
             if metadata.get('upscaled'):
-                print(f"   🔍 Images were upscaled: ✅")
+                print(f"   📈 Images were upscaled: ✅")
             else:
-                print(f"   🔍 Images were upscaled: ❌")
+                print(f"   📈 Images were upscaled: ❌")
                 
             if 'excel_report_url' in response_data and response_data['excel_report_url']:
                 print(f"   📊 Excel Report: {response_data['excel_report_url']}")

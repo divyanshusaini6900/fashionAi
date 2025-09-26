@@ -18,8 +18,8 @@ class GenerationRequest(BaseModel):
     generateCsv: bool = True
 
 class GenerationResult(BaseModel):
-    image_variations: List[str] = []
-    upscaled_image: Optional[str] = None
+    image_variations: List[str] = []  # All gemini generated images
+    upscale_image: List[str] = []  # Upscaled images when upscale=True
     output_video_url: Optional[str] = None
     excel_report_url: Optional[str] = None
     metadata: Dict[str, Any] = {}
@@ -31,8 +31,8 @@ class ProcessingStatus(BaseModel):
 
 class GenerationResponse(BaseModel):
     request_id: str
-    image_variations: List[str] = []
-    upscaled_image: Optional[str] = None
+    image_variations: List[str] = []  # All gemini generated images
+    upscale_image: List[str] = []  # Upscaled images when upscale=True
     output_video_url: Optional[str] = None
     excel_report_url: Optional[str] = None
     metadata: Dict[str, Any] = {}
@@ -44,7 +44,9 @@ class GenerationResponse(BaseModel):
                 "image_variations": [
                     "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/variation1.jpg"
                 ],
-                "upscaled_image": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/upscaled_image.jpg",
+                "upscale_image": [  # Upscaled images when upscale=True
+                    "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/upscaled_image.jpg"
+                ],
                 "output_video_url": None,
                 "excel_report_url": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/report.xlsx",
                 "metadata": {

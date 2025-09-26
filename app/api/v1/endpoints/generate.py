@@ -109,7 +109,7 @@ async def generate_fashion_image(
         response = GenerationResponse(
             request_id=request_id,
             image_variations=result.get("image_variations", []),
-            upscaled_image=result.get("upscaled_image"),
+            upscale_image=result.get("upscale_image", []),  # Upscaled images when upscale=True
             output_video_url=result.get("output_video_url"),
             excel_report_url=excel_report_url,
             metadata=result.get("metadata", {})
@@ -247,7 +247,7 @@ async def generate_fashion(
         response = GenerationResponse(
             request_id=request_id,
             image_variations=result.get("image_variations", []),
-            upscaled_image=result.get("upscaled_image"),
+            upscale_image=result.get("upscale_image", []),
             output_video_url=result.get("output_video_url"),
             excel_report_url=excel_report_url,
             metadata=result.get("metadata", {})

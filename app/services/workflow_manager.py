@@ -447,18 +447,16 @@ CRITICAL:
             
             if upscale:
                 logger.info("Upscaling generated images...")
-                # Upscale primary image
-                upscaled_primary_bytes = self.image_upscaler.upscale_image_bytes(primary_image_bytes)
-                if upscaled_primary_bytes:
-                    primary_image_bytes = upscaled_primary_bytes
-                    logger.info("Primary image upscaled successfully")
-                
-                # Upscale all variations
+                # Upscale all variations (including the primary image which is part of variations)
                 for key, image_bytes in all_variations_bytes_dict.items():
                     upscaled_bytes = self.image_upscaler.upscale_image_bytes(image_bytes)
                     if upscaled_bytes:
                         all_variations_bytes_dict[key] = upscaled_bytes
                         logger.info(f"Variation {key} upscaled successfully")
+                        # Update primary image if this variation contains it
+                        if image_bytes == primary_image_bytes:
+                            primary_image_bytes = upscaled_bytes
+                            logger.info("Primary image upscaled successfully")
 
             # 4. Save both original and upscaled images with distinct names
             if upscale:
@@ -529,12 +527,13 @@ CRITICAL:
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
                 # For the new schema, we include all variations in image_variations
-                # and the upscaled primary image in upscaled_image if upscale is True
+                # and all upscaled images in upscale_image array
                 all_variation_urls = list(variation_urls_dict.values())
+                upscaled_image_urls = [primary_image_url] if upscale and primary_image_url else []
                 
                 return {
-                    "image_variations": all_variation_urls,
-                    "upscaled_image": primary_image_url if upscale else None,
+                    "image_variations": all_variation_urls,  # All gemini generated images
+                    "upscale_image": upscaled_image_urls,  # Upscaled images when upscale=True
                     "output_video_url": video_url,
                     "excel_report_url": excel_url,
                     "metadata": {
@@ -616,18 +615,16 @@ CRITICAL:
             
             if upscale:
                 logger.info("Upscaling generated images...")
-                # Upscale primary image
-                upscaled_primary_bytes = self.image_upscaler.upscale_image_bytes(primary_image_bytes)
-                if upscaled_primary_bytes:
-                    primary_image_bytes = upscaled_primary_bytes
-                    logger.info("Primary image upscaled successfully")
-                
-                # Upscale all variations
+                # Upscale all variations (including the primary image which is part of variations)
                 for key, image_bytes in all_variations_bytes_dict.items():
                     upscaled_bytes = self.image_upscaler.upscale_image_bytes(image_bytes)
                     if upscaled_bytes:
                         all_variations_bytes_dict[key] = upscaled_bytes
                         logger.info(f"Variation {key} upscaled successfully")
+                        # Update primary image if this variation contains it
+                        if image_bytes == primary_image_bytes:
+                            primary_image_bytes = upscaled_bytes
+                            logger.info("Primary image upscaled successfully")
 
             # 4. Save both original and upscaled images with distinct names
             if upscale:
@@ -690,9 +687,13 @@ CRITICAL:
                 excel_url = save_excel_report(excel_bytes, request_id)
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
+                # Include all generated images in image_variations (including primary)
+                all_variation_urls = list(variation_urls_dict.values())
+                upscaled_image_urls = [primary_image_url] if upscale and primary_image_url else []
+                
                 return {
-                    "output_image_url": primary_image_url,
-                    "image_variations": list(additional_variations_dict.values()),
+                    "image_variations": all_variation_urls,  # All gemini generated images
+                    "upscale_image": upscaled_image_urls,  # Upscaled images when upscale=True  
                     "output_video_url": video_url,
                     "excel_report_url": excel_url,
                     "metadata": {
