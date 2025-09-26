@@ -18,8 +18,8 @@ class GenerationRequest(BaseModel):
     generateCsv: bool = True
 
 class GenerationResult(BaseModel):
-    output_image_url: Optional[str] = None
     image_variations: List[str] = []
+    upscaled_image: Optional[str] = None
     output_video_url: Optional[str] = None
     excel_report_url: Optional[str] = None
     metadata: Dict[str, Any] = {}
@@ -31,8 +31,8 @@ class ProcessingStatus(BaseModel):
 
 class GenerationResponse(BaseModel):
     request_id: str
-    output_image_url: Optional[str] = None
     image_variations: List[str] = []
+    upscaled_image: Optional[str] = None
     output_video_url: Optional[str] = None
     excel_report_url: Optional[str] = None
     metadata: Dict[str, Any] = {}
@@ -41,10 +41,10 @@ class GenerationResponse(BaseModel):
         schema_extra = {
             "example": {
                 "request_id": "123e4567-e89b-12d3-a456-426614174000",
-                "output_image_url": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/output.jpg",
                 "image_variations": [
                     "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/variation1.jpg"
                 ],
+                "upscaled_image": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/upscaled_image.jpg",
                 "output_video_url": None,
                 "excel_report_url": "http://localhost:8000/files/generated/123e4567-e89b-12d3-a456-426614174000/report.xlsx",
                 "metadata": {

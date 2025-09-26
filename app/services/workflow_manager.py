@@ -528,9 +528,13 @@ CRITICAL:
                 excel_url = save_excel_report(excel_bytes, request_id)
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
+                # For the new schema, we include all variations in image_variations
+                # and the upscaled primary image in upscaled_image if upscale is True
+                all_variation_urls = list(variation_urls_dict.values())
+                
                 return {
-                    "output_image_url": primary_image_url,
-                    "image_variations": list(additional_variations_dict.values()),
+                    "image_variations": all_variation_urls,
+                    "upscaled_image": primary_image_url if upscale else None,
                     "output_video_url": video_url,
                     "excel_report_url": excel_url,
                     "metadata": {

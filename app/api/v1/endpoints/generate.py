@@ -101,18 +101,15 @@ async def generate_fashion_image(
         logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
         
         # Ensure we have the required fields
-        output_image_url = result.get("output_image_url") or ""
         excel_report_url = result.get("excel_report_url") or ""
         
-        if not output_image_url:
-            logger.warning(f"No output_image_url in result for {request_id}")
         if not excel_report_url:
             logger.warning(f"No excel_report_url in result for {request_id}")
         
         response = GenerationResponse(
             request_id=request_id,
-            output_image_url=output_image_url,
             image_variations=result.get("image_variations", []),
+            upscaled_image=result.get("upscaled_image"),
             output_video_url=result.get("output_video_url"),
             excel_report_url=excel_report_url,
             metadata=result.get("metadata", {})
@@ -242,18 +239,15 @@ async def generate_fashion(
         logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
         
         # Ensure we have the required fields
-        output_image_url = result.get("output_image_url") or ""
         excel_report_url = result.get("excel_report_url") or ""
         
-        if not output_image_url:
-            logger.warning(f"No output_image_url in result for {request_id}")
         if not excel_report_url:
             logger.warning(f"No excel_report_url in result for {request_id}")
         
         response = GenerationResponse(
             request_id=request_id,
-            output_image_url=output_image_url,
             image_variations=result.get("image_variations", []),
+            upscaled_image=result.get("upscaled_image"),
             output_video_url=result.get("output_video_url"),
             excel_report_url=excel_report_url,
             metadata=result.get("metadata", {})
