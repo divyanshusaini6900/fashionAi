@@ -16,13 +16,13 @@ def test_image_generation_with_upscale():
     test_data = {
         "inputImages": [
             {
-                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-19%20at%2011.35.31_d5ceb091.jpg?alt=media&token=ee5c5967-37c6-456a-9de0-02bd93689ae3",
+                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-27%20at%2001.57.07_438bdac1.jpg?alt=media&token=2d0e3575-496a-49ec-ad4c-67ba5e998c3d",
                 "view": "front",
-                "backgrounds": [0, 1, 0]  # 1 random background
+                "backgrounds": [1, 0, 0]  # 1 random background
             }
         ],
         "productType": "general",
-        "gender": "male",
+        "gender": "female",
         "text": "",
         "isVideo": False,
         "upscale": True,  # Enable upscaling

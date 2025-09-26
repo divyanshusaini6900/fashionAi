@@ -2,11 +2,31 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+import asyncio
+from contextlib import asynccontextmanager
+
+from app.services.task_queue import start_task_queue, stop_task_queue
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager for startup and shutdown events"""
+    # Startup
+    print("🚀 Starting Fashion Modeling AI with Parallel Processing...")
+    await start_task_queue()
+    print("✅ Task queue system initialized")
+    
+    yield
+    
+    # Shutdown
+    print("🛑 Shutting down Fashion Modeling AI...")
+    await stop_task_queue()
+    print("✅ Task queue system stopped")
 
 app = FastAPI(
     title="Fashion Modeling AI API",
     description="API for processing fashion images and generating reports",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # CORS middleware configuration

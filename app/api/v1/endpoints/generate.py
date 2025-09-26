@@ -3,18 +3,22 @@ from typing import List, Optional, Dict
 import uuid
 import os
 import logging
+import time
 from pathlib import Path
 from app.core.config import settings
 from app.utils.file_helpers import save_upload_files, cleanup_temp_files
 from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, GenerationResult, FileAccessResponse, GenerationRequest
 from app.services.workflow_manager import WorkflowManager
+from app.services.parallel_workflow_manager import ParallelWorkflowManager
+from app.services.task_queue import task_queue
 import json
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-workflow_manager = WorkflowManager()
+# Use parallel workflow manager for better performance
+workflow_manager = ParallelWorkflowManager()
 
 @router.post(
     "/generate/image",
@@ -81,9 +85,9 @@ async def generate_fashion_image(
         # Schedule cleanup of temporary files
         background_tasks.add_task(cleanup_temp_files, request_id)
         
-        # Process through workflow manager with background array support
-        logger.info(f"Starting workflow process with background array for request_id: {request_id}")
-        result = await workflow_manager.process_request_with_background_array(
+        # Process through parallel workflow manager with background array support
+        logger.info(f"Starting parallel workflow process with background array for request_id: {request_id}")
+        result = await workflow_manager.process_request_with_background_array_parallel(
             image_paths=saved_paths_dict,
             background_config=background_config,
             text_description=generation_request.text,
@@ -220,9 +224,9 @@ async def generate_fashion(
         # Schedule cleanup of temporary files
         background_tasks.add_task(cleanup_temp_files, request_id)
         
-        # Process through workflow manager
-        logger.info(f"Starting workflow process for request_id: {request_id}")
-        result = await workflow_manager.process_request(
+        # Process through parallel workflow manager
+        logger.info(f"Starting parallel workflow process for request_id: {request_id}")
+        result = await workflow_manager.process_request_parallel(
             image_paths=saved_paths_dict,
             text_description=text,
             request_id=request_id,
@@ -361,3 +365,24 @@ def get_file_type(filename: str) -> str:
         return 'pdf'
     else:
         return 'other'
+
+@router.get("/status/queue")
+async def get_queue_status():
+    """
+    Get current status of the parallel processing queue system.
+    """
+    try:
+        status = task_queue.get_queue_status()
+        return {
+            "status": "success",
+            "queue_info": status,
+            "parallel_processing": "enabled",
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Error getting queue status: {e}", exc_info=True)
+        return {
+            "status": "error",
+            "message": str(e),
+            "parallel_processing": "unknown"
+        }
