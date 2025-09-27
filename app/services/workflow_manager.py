@@ -517,7 +517,6 @@ CRITICAL:
                 
                 excel_bytes = self.excel_generator.create_report(
                     product_data=product_data,
-                    image_url=primary_image_url,
                     variation_urls=additional_variations_dict,
                     video_url=video_url
                 )
@@ -634,14 +633,17 @@ CRITICAL:
                     all_variations_bytes_dict, 
                     request_id
                 )
-                # Use upscaled images for the rest of the workflow
-                variation_urls_dict = saved_images_result['upscaled']
-                # Store original image URLs in metadata
-                original_image_urls = saved_images_result['original']
+                # Keep original and upscaled URLs separate
+                original_variation_urls_dict = saved_images_result['original']
+                upscaled_variation_urls_dict = saved_images_result['upscaled']
+                
+                # For Excel generation, use upscaled images
+                variation_urls_dict = upscaled_variation_urls_dict
             else:
                 # Save only generated images (no upscaling)
-                variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
-                original_image_urls = {}
+                original_variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+                upscaled_variation_urls_dict = {}
+                variation_urls_dict = original_variation_urls_dict
             
             # The primary image URL is the one associated with the 'frontside' view, or the first one saved.
             primary_image_url = variation_urls_dict.get("frontside") or next(iter(variation_urls_dict.values()), None)
@@ -678,7 +680,6 @@ CRITICAL:
                 
                 excel_bytes = self.excel_generator.create_report(
                     product_data=product_data,
-                    image_url=primary_image_url,
                     variation_urls=additional_variations_dict,
                     video_url=video_url
                 )
@@ -687,21 +688,23 @@ CRITICAL:
                 excel_url = save_excel_report(excel_bytes, request_id)
                 logger.info(f"Excel report saved successfully: {excel_url}")
                 
-                # Include all generated images in image_variations (including primary)
-                all_variation_urls = list(variation_urls_dict.values())
-                upscaled_image_urls = [primary_image_url] if upscale and primary_image_url else []
+                # Separate original and upscaled image URLs for clean response
+                original_image_urls = list(original_variation_urls_dict.values())
+                upscaled_image_urls = list(upscaled_variation_urls_dict.values()) if upscale else []
                 
                 return {
-                    "image_variations": all_variation_urls,  # All gemini generated images
-                    "upscale_image": upscaled_image_urls,  # Upscaled images when upscale=True  
+                    "image_variations": original_image_urls,  # Original generated images only
+                    "upscale_image": upscaled_image_urls,  # Upscaled images only (when upscale=True)
                     "output_video_url": video_url,
                     "excel_report_url": excel_url,
                     "metadata": {
                         "analysis": analysis_json,
                         "request_id": request_id,
-                        "total_variations": len(variation_urls_dict),
+                        "total_variations": len(original_variation_urls_dict),
                         "upscaled": upscale,
-                        "original_image_urls": original_image_urls
+                        "processing_times": {
+                            # Add processing times if available
+                        }
                     }
                 }
             except Exception as excel_error:

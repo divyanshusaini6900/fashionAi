@@ -146,11 +146,17 @@ class ParallelWorkflowManager(WorkflowManager):
                     all_variations_bytes_dict,
                     request_id
                 )
-                variation_urls_dict = saved_images_result['upscaled']
-                original_image_urls = saved_images_result['original']
+                # Keep original and upscaled URLs separate
+                original_variation_urls_dict = saved_images_result['original']
+                upscaled_variation_urls_dict = saved_images_result['upscaled']
+                
+                # For Excel generation, use upscaled images
+                variation_urls_dict = upscaled_variation_urls_dict
             else:
-                variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
-                original_image_urls = {}
+                # Save only generated images (no upscaling)
+                original_variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+                upscaled_variation_urls_dict = {}
+                variation_urls_dict = original_variation_urls_dict
             
             # Get primary image URL
             primary_image_url = variation_urls_dict.get("frontside") or next(iter(variation_urls_dict.values()), None)
@@ -181,24 +187,23 @@ class ParallelWorkflowManager(WorkflowManager):
             saving_time = time.time() - saving_start
             logger.info(f"File saving and report generation completed in {saving_time:.2f}s")
             
-            # Prepare response
-            all_variation_urls = list(variation_urls_dict.values())
-            upscaled_image_urls = [primary_image_url] if upscale and primary_image_url else []
+            # Prepare clean response with separated original and upscaled images
+            original_image_urls = list(original_variation_urls_dict.values())
+            upscaled_image_urls = list(upscaled_variation_urls_dict.values()) if upscale else []
             
             total_time = time.time() - start_time
             logger.info(f"Parallel workflow completed for {request_id} in {total_time:.2f}s")
             
             return {
-                "image_variations": all_variation_urls,
-                "upscale_image": upscaled_image_urls,
+                "image_variations": original_image_urls,  # Original generated images only
+                "upscale_image": upscaled_image_urls,  # Upscaled images only (when upscale=True)
                 "output_video_url": video_url,
                 "excel_report_url": excel_url,
                 "metadata": {
                     "analysis": analysis_json,
                     "request_id": request_id,
-                    "total_variations": len(variation_urls_dict),
+                    "total_variations": len(original_variation_urls_dict),
                     "upscaled": upscale,
-                    "original_image_urls": original_image_urls,
                     "processing_times": {
                         "analysis": analysis_time,
                         "generation": generation_time,
@@ -313,11 +318,17 @@ class ParallelWorkflowManager(WorkflowManager):
                     all_variations_bytes_dict,
                     request_id
                 )
-                variation_urls_dict = saved_images_result['upscaled']
-                original_image_urls = saved_images_result['original']
+                # Keep original and upscaled URLs separate
+                original_variation_urls_dict = saved_images_result['original']
+                upscaled_variation_urls_dict = saved_images_result['upscaled']
+                
+                # For Excel generation, use upscaled images
+                variation_urls_dict = upscaled_variation_urls_dict
             else:
-                variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
-                original_image_urls = {}
+                # Save only generated images (no upscaling)
+                original_variation_urls_dict = save_generated_image_variations(all_variations_bytes_dict, request_id)
+                upscaled_variation_urls_dict = {}
+                variation_urls_dict = original_variation_urls_dict
             
             # Primary image selection
             primary_image_url = None
@@ -354,24 +365,23 @@ class ParallelWorkflowManager(WorkflowManager):
             saving_time = time.time() - saving_start
             logger.info(f"File saving and report generation completed in {saving_time:.2f}s")
             
-            # Prepare response
-            all_variation_urls = list(variation_urls_dict.values())
-            upscaled_image_urls = [primary_image_url] if upscale and primary_image_url else []
+            # Prepare clean response with separated original and upscaled images
+            original_image_urls = list(original_variation_urls_dict.values())
+            upscaled_image_urls = list(upscaled_variation_urls_dict.values()) if upscale else []
             
             total_time = time.time() - start_time
             logger.info(f"Parallel background array workflow completed for {request_id} in {total_time:.2f}s")
             
             return {
-                "image_variations": all_variation_urls,
-                "upscale_image": upscaled_image_urls,
+                "image_variations": original_image_urls,  # Original generated images only
+                "upscale_image": upscaled_image_urls,  # Upscaled images only (when upscale=True)
                 "output_video_url": video_url,
                 "excel_report_url": excel_url,
                 "metadata": {
                     "analysis": analysis_json,
                     "request_id": request_id,
-                    "total_variations": len(variation_urls_dict),
+                    "total_variations": len(original_variation_urls_dict),
                     "upscaled": upscale,
-                    "original_image_urls": original_image_urls,
                     "processing_times": {
                         "analysis": analysis_time,
                         "generation": generation_time,
@@ -483,13 +493,17 @@ class ParallelWorkflowManager(WorkflowManager):
             
             # Run Excel generation in thread pool to avoid blocking
             loop = asyncio.get_event_loop()
+            # Create a wrapper function to call create_report with keyword arguments
+            def create_excel_report():
+                return self.excel_generator.create_report(
+                    product_data=product_data,
+                    variation_urls=additional_variations_dict,
+                    video_url=video_url
+                )
+            
             excel_bytes = await loop.run_in_executor(
                 self.thread_executor,
-                self.excel_generator.create_report,
-                product_data,
-                primary_image_url,
-                additional_variations_dict,
-                video_url
+                create_excel_report
             )
             
             # Save the Excel report

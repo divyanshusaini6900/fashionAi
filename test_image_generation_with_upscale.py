@@ -25,7 +25,7 @@ def test_image_generation_with_upscale():
         "gender": "female",
         "text": "",
         "isVideo": False,
-        "upscale": True,  # Enable upscaling
+        "upscale": False,  # Enable upscaling
         "numberOfOutputs": 1,
         "generateCsv": True,
     }

@@ -23,27 +23,27 @@ class ExcelGenerator:
                     "Description": [],
                     "Key Features": [],
                     "Search Keywords": [],
-                    "Primary Image URL": [],
+                    "Front View URL": [],
+                    "Side View URL": [],
+                    "Back View URL": [],
                     "Video URL": []
                 })
         except Exception as e:
             logger.error(f"Error initializing Excel generator: {str(e)}")
             raise
 
-    def _prepare_data(self, product_data: Dict[str, Any], image_url: str, variation_urls: Optional[Dict[str, str]] = None, video_url: Optional[str] = None) -> Dict[str, Any]:
+    def _prepare_data(self, product_data: Dict[str, Any], variation_urls: Optional[Dict[str, str]] = None, video_url: Optional[str] = None) -> Dict[str, Any]:
         """
         Prepares the detailed product data for Excel, ensuring all values are serializable.
         
         Args:
             product_data: The structured product data
-            image_url: The URL of the primary generated image
             variation_urls: Optional dictionary of view names to image URLs for variations.
             video_url: Optional URL for the generated video
         """
         try:
             logger.info("Preparing data for Excel report")
             logger.info(f"Product data keys: {list(product_data.keys())}")
-            logger.info(f"Primary image URL: {image_url}")
             logger.info(f"Number of variations: {len(variation_urls) if variation_urls else 0}")
 
             # Make a copy to avoid modifying the original dict
@@ -52,15 +52,24 @@ class ExcelGenerator:
                 "Description": product_data.get("Description"),
             }
             
-            # Add the generated image URLs to the data
-            data["Primary Image URL"] = image_url
+            # Define allowed view types for columns (excluding detail views)
+            allowed_views = {'frontside', 'backside', 'sideview'}
+            view_name_mapping = {
+                'frontside': 'Front View URL',
+                'backside': 'Back View URL', 
+                'sideview': 'Side View URL'
+            }
             
-            # Add variation URLs if provided
+            # Add variation URLs if provided, only for allowed views
             if variation_urls:
                 for view_name, url in variation_urls.items():
-                    column_name = f"{view_name.replace('_', ' ').title()} View URL"
-                    data[column_name] = url
-                    logger.info(f"Added {column_name}: {url}")
+                    # Only create columns for front, back, and side views (not detail views)
+                    if view_name.lower() in allowed_views:
+                        column_name = view_name_mapping.get(view_name.lower(), f"{view_name.replace('_', ' ').title()} View URL")
+                        data[column_name] = url
+                        logger.info(f"Added {column_name}: {url}")
+                    else:
+                        logger.info(f"Skipping column creation for view: {view_name} (detail view excluded)")
 
             # Add video URL
             data["Video URL"] = video_url if video_url else ""
@@ -83,9 +92,15 @@ class ExcelGenerator:
                         data[key] = "To be specified"
             
             # Ensure all template columns are present in the data
+            view_columns = ["Front View URL", "Side View URL", "Back View URL"]
             for column in self.template_df.columns:
                 if column not in data:
-                    data[column] = "To be specified"
+                    # For view columns, only add them if they're supposed to have data
+                    # Otherwise, leave them empty instead of "To be specified"
+                    if column in view_columns:
+                        data[column] = ""  # Empty string for view columns without data
+                    else:
+                        data[column] = "To be specified"  # Default for other columns
             
             logger.info(f"Final data keys: {list(data.keys())}")
             return data
@@ -94,13 +109,12 @@ class ExcelGenerator:
             logger.error(f"Error preparing Excel data: {str(e)}")
             raise
 
-    def create_report(self, product_data: Dict[str, Any], image_url: str, variation_urls: Optional[Dict[str, str]] = None, video_url: Optional[str] = None) -> bytes:
+    def create_report(self, product_data: Dict[str, Any], variation_urls: Optional[Dict[str, str]] = None, video_url: Optional[str] = None) -> bytes:
         """
         Creates a detailed Excel report from the rich product data dictionary.
         
         Args:
             product_data: The structured product data from the workflow.
-            image_url: The URL of the primary generated image.
             variation_urls: Optional dictionary of view names to image URLs for variations.
             video_url: Optional URL for the generated video.
             
@@ -113,36 +127,52 @@ class ExcelGenerator:
             # Validate inputs
             if not isinstance(product_data, dict):
                 raise ValueError(f"product_data must be a dictionary, got {type(product_data)}")
-            if not image_url:
-                raise ValueError("image_url cannot be empty")
             
             # Prepare the data, converting lists to strings and adding the image URLs
-            prepared_data = self._prepare_data(product_data, image_url, variation_urls, video_url)
+            prepared_data = self._prepare_data(product_data, variation_urls, video_url)
             
             # Create a DataFrame from the dictionary
             logger.info("Creating DataFrame from prepared data")
             report_df = pd.DataFrame([prepared_data])  # Wrap in list to ensure single row
             
-            # Determine the column order
+            # Determine the column order with proper view URL positioning
             static_columns = list(self.template_df.columns)
             
-            # Extract dynamically generated variation columns
-            variation_columns = sorted([
-                col for col in prepared_data.keys() 
-                if col.endswith(" View URL") and col != "Primary Image URL"
-            ])
+            # Define the preferred order for view columns
+            preferred_view_order = ["Front View URL", "Side View URL", "Back View URL"]
             
-            # Position variation columns after the primary image URL
+            # Extract dynamically generated variation columns that are actually present in the data
+            variation_columns = []
+            for view_col in preferred_view_order:
+                if view_col in prepared_data:
+                    variation_columns.append(view_col)
+            
+            # Add any other view columns not in the preferred order
+            other_view_columns = sorted([
+                col for col in prepared_data.keys() 
+                if col.endswith(" View URL") and col not in variation_columns
+            ])
+            variation_columns.extend(other_view_columns)
+            
+            # Position variation columns after Search Keywords (before Video URL)
             try:
-                primary_image_index = static_columns.index("Primary Image URL")
+                keywords_index = static_columns.index("Search Keywords")
+                # Remove any pre-defined view columns from static columns that are in variation_columns
+                filtered_static_columns = [col for col in static_columns if col not in variation_columns]
+                keywords_index = filtered_static_columns.index("Search Keywords")
                 final_columns = (
-                    static_columns[:primary_image_index + 1] +
+                    filtered_static_columns[:keywords_index + 1] +
                     variation_columns +
-                    static_columns[primary_image_index + 1:]
+                    filtered_static_columns[keywords_index + 1:]
                 )
             except ValueError:
-                # Fallback if "Primary Image URL" is not in the static columns
-                final_columns = static_columns + variation_columns
+                # Fallback - put view columns before video URL
+                final_columns = [col for col in static_columns if col not in variation_columns]
+                if "Video URL" in final_columns:
+                    video_index = final_columns.index("Video URL")
+                    final_columns = final_columns[:video_index] + variation_columns + final_columns[video_index:]
+                else:
+                    final_columns.extend(variation_columns)
 
             # Ensure all columns from the report are included in the final list
             for col in report_df.columns:
