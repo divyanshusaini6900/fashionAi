@@ -164,6 +164,9 @@ class ParallelWorkflowManager(WorkflowManager):
             if not primary_image_url:
                 raise ValueError("Failed to obtain a primary image URL after saving.")
             
+            # Keep all variations for Excel generation (don't exclude primary image)
+            all_variations_dict = variation_urls_dict.copy()
+            
             # Get additional variations
             additional_variations_dict = {
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
@@ -181,7 +184,7 @@ class ParallelWorkflowManager(WorkflowManager):
             
             # Generate Excel report (this can be done in parallel with video in future)
             excel_url = await self._generate_excel_report_async(
-                product_data, primary_image_url, additional_variations_dict, video_url, request_id
+                product_data, primary_image_url, all_variations_dict, video_url, request_id
             )
             
             saving_time = time.time() - saving_start
@@ -343,6 +346,9 @@ class ParallelWorkflowManager(WorkflowManager):
             if not primary_image_url:
                 raise ValueError("Failed to obtain a primary image URL after saving.")
             
+            # Keep all variations for Excel generation (don't exclude primary image)
+            all_variations_dict = variation_urls_dict.copy()
+            
             additional_variations_dict = {
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
             }
@@ -359,7 +365,7 @@ class ParallelWorkflowManager(WorkflowManager):
             
             # Generate Excel report
             excel_url = await self._generate_excel_report_async(
-                product_data, primary_image_url, additional_variations_dict, video_url, request_id
+                product_data, primary_image_url, all_variations_dict, video_url, request_id
             )
             
             saving_time = time.time() - saving_start
@@ -483,7 +489,7 @@ class ParallelWorkflowManager(WorkflowManager):
         self,
         product_data: Dict,
         primary_image_url: str,
-        additional_variations_dict: Dict,
+        all_variations_dict: Dict,
         video_url: Optional[str],
         request_id: str
     ) -> str:
@@ -497,7 +503,7 @@ class ParallelWorkflowManager(WorkflowManager):
             def create_excel_report():
                 return self.excel_generator.create_report(
                     product_data=product_data,
-                    variation_urls=additional_variations_dict,
+                    variation_urls=all_variations_dict,
                     video_url=video_url
                 )
             

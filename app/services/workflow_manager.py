@@ -488,7 +488,10 @@ CRITICAL:
             if not primary_image_url:
                 raise ValueError("Failed to obtain a primary image URL after saving.")
 
-            # Get additional variations (excluding primary image's URL if it's in the dict)
+            # Keep all variations for Excel generation (don't exclude primary image)
+            all_variations_dict = variation_urls_dict.copy()
+            
+            # Also create additional variations for other purposes (excluding primary image)
             additional_variations_dict = {
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
             }
@@ -517,7 +520,7 @@ CRITICAL:
                 
                 excel_bytes = self.excel_generator.create_report(
                     product_data=product_data,
-                    variation_urls=additional_variations_dict,
+                    variation_urls=all_variations_dict,
                     video_url=video_url
                 )
                 
@@ -651,7 +654,10 @@ CRITICAL:
             if not primary_image_url:
                 raise ValueError("Failed to obtain a primary image URL after saving.")
 
-            # Get additional variations (excluding primary image's URL if it's in the dict)
+            # Keep all variations for Excel generation (don't exclude primary image)
+            all_variations_dict = variation_urls_dict.copy()
+            
+            # Also create additional variations for other purposes (excluding primary image)
             additional_variations_dict = {
                 view: url for view, url in variation_urls_dict.items() if url != primary_image_url
             }
@@ -680,7 +686,7 @@ CRITICAL:
                 
                 excel_bytes = self.excel_generator.create_report(
                     product_data=product_data,
-                    variation_urls=additional_variations_dict,
+                    variation_urls=all_variations_dict,
                     video_url=video_url
                 )
                 

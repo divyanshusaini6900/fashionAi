@@ -60,16 +60,32 @@ class ExcelGenerator:
                 'sideview': 'Side View URL'
             }
             
+            # Enhanced view type detection for different key formats
+            def get_view_type(view_name):
+                """Extract view type from different key formats"""
+                view_lower = view_name.lower()
+                if 'front' in view_lower:
+                    return 'frontside'
+                elif 'side' in view_lower:
+                    return 'sideview' 
+                elif 'back' in view_lower:
+                    return 'backside'
+                return None
+            
             # Add variation URLs if provided, only for allowed views
             if variation_urls:
                 for view_name, url in variation_urls.items():
+                    # Detect view type from key name
+                    view_type = get_view_type(view_name)
+                    
                     # Only create columns for front, back, and side views (not detail views)
-                    if view_name.lower() in allowed_views:
-                        column_name = view_name_mapping.get(view_name.lower(), f"{view_name.replace('_', ' ').title()} View URL")
-                        data[column_name] = url
-                        logger.info(f"Added {column_name}: {url}")
+                    if view_type and view_type in allowed_views:
+                        column_name = view_name_mapping.get(view_type)
+                        if column_name:
+                            data[column_name] = url
+                            logger.info(f"Added {column_name}: {url} (from key: {view_name})")
                     else:
-                        logger.info(f"Skipping column creation for view: {view_name} (detail view excluded)")
+                        logger.info(f"Skipping column creation for view: {view_name} (not a recognized view type or detail view excluded)")
 
             # Add video URL
             data["Video URL"] = video_url if video_url else ""
