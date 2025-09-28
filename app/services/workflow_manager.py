@@ -126,12 +126,79 @@ Analyze the images and description thoroughly to generate the required product d
 3. **Search Keywords**:
    - Generate specific, relevant search keywords.
 
+4. **Model Pose Recommendations**:
+   - Based on the product type, occasion, and gender, recommend appropriate model poses that would best showcase the product
+   - Consider cultural appropriateness, product functionality, and aesthetic appeal
+   - Provide 2-3 pose recommendations with brief descriptions
+
+5. **Distressing Details (for jeans only)**:
+   - If the product is jeans, analyze and specify the exact distressing details
+   - Include precise locations of distressing (knee, thigh, pocket area, etc.)
+   - Describe the type of distressing (ripped, faded, worn, etc.)
+   - Specify the severity level (light, medium, heavy)
+
 **CRITICAL INSTRUCTIONS:**
 1. Be SPECIFIC and DETAILED in every field.
 2. Use the provided SKU_ID: {sku_id}
 3. Ensure the output is a valid JSON object.
 
-**EXAMPLE OUTPUT FORMAT:**
+**EXAMPLE OUTPUT FORMAT FOR JEANS:**
+```json
+{{
+    "product_data": {{
+        "SKU_ID": "{sku_id}",
+        "Description": "Trendy ripped jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
+        "Key Features": [
+            "Authentic denim fabric with comfortable stretch",
+            "Strategically placed distressing for a trendy look",
+            "Classic five-pocket design with zip fly"
+        ],
+        "Search Keywords": [
+            "Ripped Jeans",
+            "Distressed Denim",
+            "Casual Jeans",
+            "Streetwear Pants",
+            "Trendy Bottoms"
+        ],
+        "Gender": "Men",
+        "Occasion": "Casual",
+        "ModelPoses": [
+            "Relaxed standing pose with hands in pockets, showcasing legwear",
+            "Three-quarter view highlighting knee distressing details",
+            "Casual leaning pose against wall, emphasizing overall fit"
+        ],
+        "DistressingDetails": [
+            {{
+                "location": "left knee",
+                "type": "ripped",
+                "severity": "medium",
+                "description": "Torn fabric with visible fraying edges"
+            }},
+            {{
+                "location": "right thigh",
+                "type": "faded",
+                "severity": "light",
+                "description": "Subtle fading for a worn-in look"
+            }},
+            {{
+                "location": "left pocket area",
+                "type": "worn",
+                "severity": "medium",
+                "description": "Distressed pocket corners with slight fabric wear"
+            }}
+        ]
+    }},
+    "image_analysis": {{
+        "quality": "High quality product images with good lighting",
+        "lighting": "Natural lighting with good visibility",
+        "background": "Clean background suitable for e-commerce",
+        "key_features": ["Visible distressing details", "Clear fabric texture"],
+        "suggested_improvements": ["Additional close-up shots of distressing could be beneficial"]
+    }}
+}}
+```
+
+**EXAMPLE OUTPUT FORMAT FOR OTHER PRODUCTS:**
 ```json
 {{
     "product_data": {{
@@ -150,7 +217,12 @@ Analyze the images and description thoroughly to generate the required product d
             "Traditional Indian Wear"
         ],
         "Gender": "Women",
-        "Occasion": "Wedding"
+        "Occasion": "Wedding",
+        "ModelPoses": [
+            "Elegant standing pose with hands gently clasped, showcasing the full length of the lehenga",
+            "Graceful three-quarter view pose with slight turn, highlighting the embroidery work",
+            "Classic pose with one hand resting on hip, emphasizing the fitted blouse design"
+        ]
     }},
     "image_analysis": {{
         "quality": "High quality product images with good lighting",
@@ -260,12 +332,79 @@ Analyze the images and description thoroughly to generate the required product d
 3.  **Search Keywords**:
     - Generate specific, relevant search keywords.
 
+4. **Model Pose Recommendations**:
+   - Based on the product type, occasion, and gender, recommend appropriate model poses that would best showcase the product
+   - Consider cultural appropriateness, product functionality, and aesthetic appeal
+   - Provide 2-3 pose recommendations with brief descriptions
+
+5. **Distressing Details (for jeans only)**:
+   - If the product is jeans, analyze and specify the exact distressing details
+   - Include precise locations of distressing (knee, thigh, pocket area, etc.)
+   - Describe the type of distressing (ripped, faded, worn, etc.)
+   - Specify the severity level (light, medium, heavy)
+
 **CRITICAL INSTRUCTIONS:**
 1.  Be SPECIFIC and DETAILED in every field.
 2.  Use the provided SKU_ID.
 3.  Ensure the output is a valid JSON object.
 
-**EXAMPLE OUTPUT FORMAT:**
+**EXAMPLE OUTPUT FORMAT FOR JEANS:**
+```json
+{{
+    "product_data": {{
+        "SKU_ID": "gen-prod-a1b2c3d4",
+        "Description": "Trendy ripped jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
+        "Key Features": [
+            "Authentic denim fabric with comfortable stretch",
+            "Strategically placed distressing for a trendy look",
+            "Classic five-pocket design with zip fly"
+        ],
+        "Search Keywords": [
+            "Ripped Jeans",
+            "Distressed Denim",
+            "Casual Jeans",
+            "Streetwear Pants",
+            "Trendy Bottoms"
+        ],
+        "Gender": "Men",
+        "Occasion": "Casual",
+        "ModelPoses": [
+            "Relaxed standing pose with hands in pockets, showcasing legwear",
+            "Three-quarter view highlighting knee distressing details",
+            "Casual leaning pose against wall, emphasizing overall fit"
+        ],
+        "DistressingDetails": [
+            {{
+                "location": "left knee",
+                "type": "ripped",
+                "severity": "medium",
+                "description": "Torn fabric with visible fraying edges"
+            }},
+            {{
+                "location": "right thigh",
+                "type": "faded",
+                "severity": "light",
+                "description": "Subtle fading for a worn-in look"
+            }},
+            {{
+                "location": "left pocket area",
+                "type": "worn",
+                "severity": "medium",
+                "description": "Distressed pocket corners with slight fabric wear"
+            }}
+        ]
+    }},
+    "image_analysis": {{
+        "quality": "Detailed image quality assessment",
+        "lighting": "Specific lighting conditions",
+        "background": "Background description",
+        "key_features": ["Visible distressing details", "Clear fabric texture"],
+        "suggested_improvements": ["Additional close-up shots of distressing could be beneficial"]
+    }}
+}}
+```
+
+**EXAMPLE OUTPUT FORMAT FOR OTHER PRODUCTS:**
 ```json
 {{
     "product_data": {{
@@ -284,7 +423,12 @@ Analyze the images and description thoroughly to generate the required product d
             "Traditional Indian Wear"
         ],
         "Gender": "Women",
-        "Occasion": "Wedding"
+        "Occasion": "Wedding",
+        "ModelPoses": [
+            "Elegant standing pose with hands gently clasped, showcasing the full length of the lehenga",
+            "Graceful three-quarter view pose with slight turn, highlighting the embroidery work",
+            "Classic pose with one hand resting on hip, emphasizing the fitted blouse design"
+        ]
     }},
     "image_analysis": {{
         "quality": "Detailed image quality assessment",

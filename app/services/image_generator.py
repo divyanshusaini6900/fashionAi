@@ -205,6 +205,29 @@ Return your response as a JSON array of 3 strings, like this:
         
         aspect_description = aspect_ratio_descriptions.get(aspect_ratio, "portrait orientation with 9:16 aspect ratio (height 1.78x width)")
         
+        # Get model pose recommendations from product data, if available
+        model_poses = product_data.get('ModelPoses', [])
+        pose_description = ""
+        if model_poses and len(model_poses) > 0:
+            # Use the first pose recommendation
+            pose_description = f"- Position model in a {model_poses[0]}"
+        else:
+            # Default pose guidance
+            pose_description = "- Position model with confident, natural posture showcasing the outfit"
+        
+        # Check if this is a jeans product and get distressing details
+        distressing_details = product_data.get('DistressingDetails', [])
+        distressing_description = ""
+        if distressing_details and len(distressing_details) > 0:
+            distressing_text = "\nDISTRESSING DETAILS:\n"
+            for detail in distressing_details:
+                location = detail.get('location', 'unknown area')
+                distress_type = detail.get('type', 'distressed')
+                severity = detail.get('severity', 'medium')
+                description = detail.get('description', '')
+                distressing_text += f"- {location}: {distress_type} ({severity} severity) - {description}\n"
+            distressing_description = distressing_text
+        
         # Enhanced prompt with advanced fashion photography techniques
         prompt = f"""
 Professional high-fashion photography of a single {model_type} model wearing the exact product from the reference images, positioned in a {background}.
@@ -218,12 +241,12 @@ PHOTOGRAPHY DIRECTIVES:
   * All design details (neckline, sleeves, hemline)
   * Pattern and fabric texture
   * Fit and silhouette
-  * Length and proportions
+  * Length and proportions{distressing_description}
 
 ADVANCED FASHION PHOTOGRAPHY TECHNIQUES:
 - Use cinematic lighting with dramatic shadows to highlight fabric texture
 - Apply golden hour lighting principles for natural skin tones
-- Position model with confident, natural posture showcasing the outfit
+{pose_description}
 - Ensure perfect color matching between reference and generated clothing
 - Capture intricate details like stitching, embroidery, and fabric weave
 - Use shallow depth of field to focus on the garment while blurring background slightly
