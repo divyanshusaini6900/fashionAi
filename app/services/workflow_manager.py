@@ -107,13 +107,13 @@ class WorkflowManager:
             logger.info("Starting Gemini analysis...")
             
             # Construct the detailed prompt
-            prompt = f"""You are an expert e-commerce product data analyst. Your task is to provide a DETAILED and COMPREHENSIVE analysis of the fashion product shown in the images and described in the text.
+            prompt = f"""You are an expert e-commerce product data analyst and fashion photography consultant. Your task is to provide a DETAILED and COMPREHENSIVE analysis of the fashion product shown in the images and described in the text.
 
 **PRODUCT DESCRIPTION PROVIDED:**
 {text_description}
 
 **YOUR TASK:**
-Analyze the images and description thoroughly to generate the required product data.
+Analyze the images and description thoroughly to generate the required product data, including appropriate model poses for different occasions.
 
 **ANALYSIS REQUIREMENTS:**
 
@@ -125,6 +125,11 @@ Analyze the images and description thoroughly to generate the required product d
 
 3. **Search Keywords**:
    - Generate specific, relevant search keywords.
+
+4. **Model Pose Recommendations**:
+   - Based on the product type, occasion, and gender, recommend appropriate model poses that would best showcase the product.
+   - Provide 3 different pose recommendations that would work well for lifestyle images.
+   - Each pose should be described in detail (e.g., "standing straight with hands clasped", "sitting gracefully with one leg crossed", "walking confidently with product flowing naturally").
 
 **CRITICAL INSTRUCTIONS:**
 1. Be SPECIFIC and DETAILED in every field.
@@ -150,7 +155,12 @@ Analyze the images and description thoroughly to generate the required product d
             "Traditional Indian Wear"
         ],
         "Gender": "Women",
-        "Occasion": "Wedding"
+        "Occasion": "Wedding",
+        "RecommendedPoses": [
+            "Standing straight with hands gently clasped in front, showcasing the full length and embroidery of the lehenga",
+            "Sitting gracefully on a chair with one leg crossed, allowing the dupatta to drape elegantly behind",
+            "Twirling slightly to show the flow and movement of the lehenga fabric"
+        ]
     }},
     "image_analysis": {{
         "quality": "High quality product images with good lighting",
@@ -222,6 +232,151 @@ CRITICAL:
         image.save(buffered, format="JPEG")
         return base64.b64encode(buffered.getvalue()).decode('utf-8')
         
+    async def _analyze_with_gemini_combined(self, image_paths: Dict[str, str], text_description: str, username: str, product: str, number_of_outputs: int = 1) -> Dict:
+        """
+        Analyzes product images and text description using Gemini's Gemini-Pro-Vision model.
+        This combined method generates background and pose recommendations in a single API call.
+        
+        Args:
+            image_paths: Dictionary of paths to product images, keyed by view name
+            text_description: Text description of the product
+            username: Username for SKU generation
+            product: Product name for SKU generation
+            number_of_outputs: Number of background/pose combinations to generate
+            
+        Returns:
+            Dictionary containing structured product data, image analysis, and background/pose recommendations
+        """
+        # Generate a unique product ID
+        sku_id = self._generate_sku_id(username, product)
+        logger.info(f"Generated SKU_ID: {sku_id}")
+
+        try:
+            logger.info("Starting combined Gemini analysis for background and pose only...")
+            
+            # Construct the detailed prompt that focuses only on background and pose generation
+            prompt = f"""You are an expert fashion photography consultant. Your task is to analyze the fashion product shown in the images and described in the text, and provide ONLY background settings and model pose recommendations that would best showcase this product.
+
+**PRODUCT INFORMATION:**
+{text_description}
+
+**YOUR TASK:**
+Based on the product type, occasion, and gender, generate appropriate background settings and model poses for different occasions.
+
+**GENERATION REQUIREMENTS:**
+
+1. **Model Information**:
+   - Determine the appropriate gender for the model based on the product
+   - Identify the primary occasion for wearing this product
+
+2. **Model Pose Recommendations**:
+   - Based on the product type, occasion, and gender, recommend appropriate model poses that would best showcase the product.
+   - Provide 3 different pose recommendations that would work well for lifestyle images.
+   - Each pose should be described in detail (e.g., "standing straight with hands clasped", "sitting gracefully with one leg crossed", "walking confidently with product flowing naturally").
+   - IMPORTANT: Focus on poses that showcase the product as it appears in the reference images, without modifying its appearance.
+
+3. **View-Specific Poses**:
+   - Recommend specific poses for different product views:
+     * frontside view: Pose that clearly shows the front of the garment
+     * backside view: Pose that clearly shows the back of the garment
+     * sideview: Pose that clearly shows the side profile and fit of the garment
+   - Each view-specific pose should be described in detail.
+   - IMPORTANT: These poses should showcase the exact product as shown in the reference images.
+
+4. **Background Settings**:
+   - Generate {number_of_outputs} unique and detailed background descriptions that complement the product and occasion.
+   - Include specific details like lighting, setting, and mood.
+   - Each background should be different from others.
+   - Focus on creating immersive, lifestyle-appropriate scenes.
+   - IMPORTANT: Backgrounds should complement the product without overshadowing it or requiring any changes to the product appearance.
+
+**CRITICAL INSTRUCTIONS:**
+1. Be SPECIFIC and DETAILED in every field.
+2. DO NOT modify or reinterpret the product appearance in any way - focus only on poses and backgrounds that showcase the product as it is.
+3. Ensure the output is a valid JSON object.
+
+**EXAMPLE OUTPUT FORMAT:**
+```json
+{{
+    "product_data": {{
+        "SKU_ID": "{sku_id}",
+        "Gender": "Women",
+        "Occasion": "Wedding",
+        "RecommendedPoses": [
+            "Standing straight with hands gently clasped in front, showcasing the full length and embroidery of the lehenga",
+            "Sitting gracefully on a chair with one leg crossed, allowing the dupatta to drape elegantly behind",
+            "Twirling slightly to show the flow and movement of the lehenga fabric"
+        ],
+        "ViewSpecificPoses": {{
+            "frontside": "Standing straight facing forward with arms slightly away from the body to showcase the front design and embroidery",
+            "backside": "Standing straight with back facing the camera, hands clasped behind to highlight the back design and fit",
+            "sideview": "Standing in profile with one hand on hip to show the silhouette and side details of the garment"
+        }}
+    }},
+    "background_recommendations": [
+        "Grand ballroom with crystal chandeliers and marble floors, bathed in warm golden lighting",
+        "Romantically lit garden terrace with string lights and blooming flowers at twilight",
+        "Luxurious hotel suite with floor-to-ceiling windows overlooking a city skyline at sunset"
+    ]
+}}
+```
+
+CRITICAL: 
+- Provide detailed, specific information for each field.
+- Only return valid JSON.
+- DO NOT modify or reinterpret the product appearance in any way.
+"""
+
+            # Load images for Gemini
+            images = []
+            for image_path in list(image_paths.values())[:5]:  # Limit to 5 images
+                try:
+                    img = Image.open(image_path)
+                    images.append(img)
+                except Exception as e:
+                    logger.warning(f"Failed to process image {image_path}: {str(e)}")
+            
+            if not images:
+                raise ValueError("No valid images found for analysis")
+                
+            # Call Gemini API with text and images
+            logger.info("Calling Gemini API for combined analysis...")
+            response = await asyncio.to_thread(
+                self.gemini_client.models.generate_content,
+                model="gemini-2.0-flash-exp",
+                contents={
+                    "parts": [
+                        {"text": prompt},
+                        *[{"inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": self._image_to_base64(img)
+                        }} for img in images]
+                    ]
+                }
+            )
+            
+            # Parse the response
+            analysis_text = response.text
+            logger.info("Successfully received combined Gemini analysis")
+            logger.info(f"Raw Gemini response: {analysis_text}")
+            
+            # Parse and validate the response
+            analysis_data = self._parse_ai_response(analysis_text)
+            logger.info(f"Parsed combined analysis data: {json.dumps(analysis_data, indent=2)}")
+            
+            # Ensure 'product_data' exists before modification
+            if "product_data" not in analysis_data:
+                raise ValueError("`product_data` not in Gemini response")
+            
+            # Always use the locally generated SKU_ID for consistency and control.
+            analysis_data["product_data"]["SKU_ID"] = sku_id
+            
+            return analysis_data
+            
+        except Exception as e:
+            logger.error(f"Error in combined Gemini analysis: {str(e)}", exc_info=True)
+            raise ValueError(f"Failed during combined Gemini analysis: {e}")
+        
     async def _analyze_with_openai(self, image_paths: Dict[str, str], text_description: str, username: str, product: str) -> Dict:
         """
         Analyzes product images and text description using OpenAI's GPT-4 Vision model.
@@ -241,13 +396,13 @@ CRITICAL:
             logger.info("Starting OpenAI analysis...")
             
             # Construct the detailed prompt
-            prompt = f"""You are an expert e-commerce product data analyst. Your task is to provide a DETAILED and COMPREHENSIVE analysis of the fashion product shown in the images and described in the text.
+            prompt = f"""You are an expert e-commerce product data analyst and fashion photography consultant. Your task is to provide a DETAILED and COMPREHENSIVE analysis of the fashion product shown in the images and described in the text.
 
 **PRODUCT DESCRIPTION PROVIDED:**
 {text_description}
 
 **YOUR TASK:**
-Analyze the images and description thoroughly to generate the required product data.
+Analyze the images and description thoroughly to generate the required product data, including appropriate model poses for different occasions.
 
 **ANALYSIS REQUIREMENTS:**
 
@@ -259,6 +414,11 @@ Analyze the images and description thoroughly to generate the required product d
 
 3.  **Search Keywords**:
     - Generate specific, relevant search keywords.
+
+4.  **Model Pose Recommendations**:
+    - Based on the product type, occasion, and gender, recommend appropriate model poses that would best showcase the product.
+    - Provide 3 different pose recommendations that would work well for lifestyle images.
+    - Each pose should be described in detail (e.g., "standing straight with hands clasped", "sitting gracefully with one leg crossed", "walking confidently with product flowing naturally").
 
 **CRITICAL INSTRUCTIONS:**
 1.  Be SPECIFIC and DETAILED in every field.
@@ -273,7 +433,7 @@ Analyze the images and description thoroughly to generate the required product d
         "Description": "This stunning lehenga choli set is perfect for weddings and special occasions. Crafted with care, the ensemble features intricate embroidery on a rich, vibrant orange fabric, offering an elegant and fashionable look. The semi-sheer dupatta adds a touch of sophistication, while the embellished border adds a luxurious finish. Ideal for women seeking a blend of traditional and contemporary style.",
         "Key Features": [
             "This stunning lehenga choli set is perfect for weddings and special occasions.",
-            "Crafted with care, the ensemble features intricate embroidery on a rich, vibrant orange fabric, offering an elegant and fashionable look.",
+            "Crafted with care, the ensemble features intricate embroidery on a rich, vibrant fabric, offering an elegant and fashionable look.",
             "The semi-sheer dupatta adds a touch of sophistication, while the embellished border adds a luxurious finish."
         ],
         "Search Keywords": [
@@ -284,7 +444,12 @@ Analyze the images and description thoroughly to generate the required product d
             "Traditional Indian Wear"
         ],
         "Gender": "Women",
-        "Occasion": "Wedding"
+        "Occasion": "Wedding",
+        "RecommendedPoses": [
+            "Standing straight with hands gently clasped in front, showcasing the full length and embroidery of the lehenga",
+            "Sitting gracefully on a chair with one leg crossed, allowing the dupatta to drape elegantly behind",
+            "Twirling slightly to show the flow and movement of the lehenga fabric"
+        ]
     }},
     "image_analysis": {{
         "quality": "Detailed image quality assessment",
@@ -421,9 +586,11 @@ CRITICAL:
             logger.info(f"Starting workflow with background array for request_id: {request_id}")
             
             # 1. Analyze inputs with AI to get detailed JSON
+            # Use combined analysis for optimization (single API call for both product analysis and background/pose recommendations)
             if settings.USE_GEMINI_FOR_TEXT:
-                analysis_json = await self._analyze_with_gemini(image_paths, text_description, username, product)
+                analysis_json = await self._analyze_with_gemini_combined(image_paths, text_description, username, product, number_of_outputs)
             else:
+                # For OpenAI, we still need separate calls
                 analysis_json = await self._analyze_with_openai(image_paths, text_description, username, product)
             
             product_data = analysis_json.get("product_data", {})
@@ -592,9 +759,11 @@ CRITICAL:
             logger.info(f"Starting workflow for request_id: {request_id}")
             
             # 1. Analyze inputs with AI to get detailed JSON
+            # Use combined analysis for optimization (single API call for both product analysis and background/pose recommendations)
             if settings.USE_GEMINI_FOR_TEXT:
-                analysis_json = await self._analyze_with_gemini(image_paths, text_description, username, product)
+                analysis_json = await self._analyze_with_gemini_combined(image_paths, text_description, username, product, number_of_outputs)
             else:
+                # For OpenAI, we still need separate calls
                 analysis_json = await self._analyze_with_openai(image_paths, text_description, username, product)
             
             product_data = analysis_json.get("product_data", {})

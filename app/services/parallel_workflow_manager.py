@@ -69,9 +69,11 @@ class ParallelWorkflowManager(WorkflowManager):
             logger.info("Step 1: Running AI analysis")
             analysis_start = time.time()
             
+            # Use combined analysis for optimization (single API call for both product analysis and background/pose recommendations)
             if settings.USE_GEMINI_FOR_TEXT:
-                analysis_json = await self._analyze_with_gemini(image_paths, text_description, username, product)
+                analysis_json = await self._analyze_with_gemini_combined(image_paths, text_description, username, product, number_of_outputs)
             else:
+                # For OpenAI, we still need separate calls
                 analysis_json = await self._analyze_with_openai(image_paths, text_description, username, product)
             
             product_data = analysis_json.get("product_data", {})
@@ -249,9 +251,11 @@ class ParallelWorkflowManager(WorkflowManager):
             logger.info("Step 1: Running AI analysis")
             analysis_start = time.time()
             
+            # Use combined analysis for optimization (single API call for both product analysis and background/pose recommendations)
             if settings.USE_GEMINI_FOR_TEXT:
-                analysis_json = await self._analyze_with_gemini(image_paths, text_description, username, product)
+                analysis_json = await self._analyze_with_gemini_combined(image_paths, text_description, username, product, number_of_outputs)
             else:
+                # For OpenAI, we still need separate calls
                 analysis_json = await self._analyze_with_openai(image_paths, text_description, username, product)
             
             product_data = analysis_json.get("product_data", {})

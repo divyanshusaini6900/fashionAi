@@ -58,6 +58,17 @@ async def generate_fashion_image(
         # Extract upscale parameter (default to True)
         upscale = getattr(generation_request, 'upscale', True)
         
+        # Extract aspect ratio parameter (default to "9:16")
+        aspect_ratio = getattr(generation_request, 'aspectRatio', "9:16")
+        
+        # Validate aspect_ratio parameter
+        valid_aspect_ratios = ["1:1", "16:9", "4:3", "3:4", "9:16"]
+        if aspect_ratio not in valid_aspect_ratios:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid aspectRatio. Must be one of: {', '.join(valid_aspect_ratios)}"
+            )
+        
         # Generate a unique request ID
         request_id = str(uuid.uuid4())
         
@@ -96,7 +107,7 @@ async def generate_fashion_image(
             product=generation_request.productType,
             isVideo=generation_request.isVideo,
             number_of_outputs=generation_request.numberOfOutputs,
-            aspect_ratio="9:16",  # Default aspect ratio
+            aspect_ratio=aspect_ratio,  # Use the aspect ratio from the request
             gender=gender,  # Pass gender parameter
             upscale=upscale  # Pass upscale parameter
         )

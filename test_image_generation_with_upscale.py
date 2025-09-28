@@ -16,15 +16,16 @@ def test_image_generation_with_upscale():
     test_data = {
         "inputImages": [
             {
-                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-27%20at%2001.57.07_438bdac1.jpg?alt=media&token=2d0e3575-496a-49ec-ad4c-67ba5e998c3d",
+                "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/11.jpg?alt=media&token=731e6858-99d9-41d3-8d99-ca3b803c4fbf",
                 "view": "front",
-                "backgrounds": [1, 0, 0]  # 1 random background
+                "backgrounds": [0, 1, 0]  # 1 random background
             }
         ],
         "productType": "general",
         "gender": "female",
         "text": "",
         "isVideo": False,
+        "aspect_ratio":"9:16",
         "upscale": False,  # Enable upscaling
         "numberOfOutputs": 1,
         "generateCsv": True,

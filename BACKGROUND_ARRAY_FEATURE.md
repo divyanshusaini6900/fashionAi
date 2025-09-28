@@ -12,20 +12,42 @@ Each view can have a background array with 3 integers: `[white_count, plain_coun
 - **plain_count**: Number of images with plain (non-white) backgrounds
 - **random_count**: Number of images with random lifestyle backgrounds
 
+## Enhanced Random Backgrounds with Gemini AI
+
+The system now uses **Gemini AI** to generate contextually appropriate random backgrounds based on:
+- Product description and features
+- Target occasion
+- Gender specification
+- Style characteristics
+
+This ensures that each background is uniquely suited to the specific product being showcased.
+
+### Example Product Analysis:
+```
+Product: Red evening gown with sequin embellishments
+Occasion: Wedding
+Style: Elegant
+```
+
+### Gemini-Generated Backgrounds:
+1. "Grand ballroom with crystal chandeliers and marble floors"
+2. "Garden ceremony with white archway and floral arrangements"
+3. "Luxury bridal suite with floor-to-ceiling windows"
+
 ## Examples
 
 ### Example 1: Background Array [0, 0, 1] with numberOfOutputs = 1
-- Generates 1 image with a random lifestyle background
+- Generates 1 image with a Gemini AI-generated lifestyle background
 - Total: 1 image
 
 ### Example 2: Background Array [0, 1, 1] with numberOfOutputs = 2
 - Generates 1 image with a plain (non-white) background
-- Generates 1 image with a random lifestyle background
+- Generates 1 image with a Gemini AI-generated lifestyle background
 - Total: 2 images
 
 ### Example 3: Background Array [1, 0, 1] with numberOfOutputs = 2
 - Generates 1 image with a clean white background
-- Generates 1 image with a random lifestyle background
+- Generates 1 image with a Gemini AI-generated lifestyle background
 - Total: 2 images
 
 ### Example 4: Background Array [2, 0, 0] with numberOfOutputs = 2
@@ -35,7 +57,7 @@ Each view can have a background array with 3 integers: `[white_count, plain_coun
 ### Example 5: Background Array [1, 1, 2] with numberOfOutputs = 4
 - Generates 1 image with a clean white background
 - Generates 1 image with a plain background
-- Generates 2 images with random lifestyle backgrounds
+- Generates 2 images with Gemini AI-generated lifestyle backgrounds
 - Total: 4 images
 
 ## API Endpoint
@@ -89,4 +111,14 @@ To test the new feature, run:
 python test_background_array.py
 ```
 
-This will test the background array functionality with sample data.
+To test the Gemini contextual background generation specifically, run:
+```bash
+python test_gemini_backgrounds.py
+```
+
+To see a demo of the contextual background generation, run:
+```bash
+python demo_contextual_backgrounds.py
+```
+
+This will demonstrate how Gemini AI generates unique, contextually appropriate backgrounds for different product types.

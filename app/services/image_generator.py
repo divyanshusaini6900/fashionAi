@@ -7,6 +7,8 @@ from typing import List, Optional, Dict, Tuple
 import base64
 import logging
 import os
+import json
+import re
 from io import BytesIO
 from PIL import Image
 
@@ -44,55 +46,161 @@ class ImageGenerator:
         
         logger.info(f"Image generation mode: {'Gemini' if settings.USE_GEMINI_FOR_IMAGES else 'Replicate'}")
 
-    def _get_background_variations(self, occasion: str) -> List[str]:
+    async def _generate_contextual_backgrounds(self, product_data: Dict, count: int = 5) -> List[str]:
         """
-        Determines appropriate background variations based on the occasion.
-        Returns a list of background descriptions.
-        """
-        # Base backgrounds - always include a plain studio background
-        backgrounds = ["clean studio with plain white background"]
+        Uses Gemini to generate contextually appropriate background descriptions.
+        First checks if backgrounds are already provided in product_data from combined analysis,
+        otherwise makes a separate API call.
         
-        # Occasion-specific backgrounds
-        occasion_backgrounds = {
-            "casual": [
-                "modern urban cafe with natural lighting",
-                "peaceful garden setting with soft sunlight",
-                "contemporary living room with large windows"
-            ],
-            "party": [
-                "elegant evening party venue with warm lighting",
-                "upscale rooftop lounge at sunset",
-                "luxurious indoor party setting with ambient lighting"
-            ],
-            "wedding": [
-                "grand wedding venue with decorative elements",
-                "outdoor garden wedding setup",
-                "elegant ballroom with chandeliers"
-            ],
-            "beach": [
-                "scenic beach during golden hour",
-                "tropical resort poolside",
-                "beachfront terrace with ocean view"
-            ],
-            "formal": [
-                "sophisticated hotel lobby",
-                "upscale restaurant interior",
-                "classic architectural backdrop"
-            ]
+        Args:
+            product_data: Product information including description, occasion, gender, etc.
+            count: Number of background descriptions to generate
+            
+        Returns:
+            List of background descriptions
+        """
+        # Check if background recommendations are already provided (from combined analysis)
+        if 'background_recommendations' in product_data and product_data['background_recommendations']:
+            backgrounds = product_data['background_recommendations']
+            # Ensure we have the right number
+            backgrounds = backgrounds[:count]
+            logger.info(f"Using {len(backgrounds)} pre-generated contextual backgrounds from combined analysis")
+            return backgrounds
+        
+        # Also check for BackgroundRecommendations (alternative format)
+        if 'BackgroundRecommendations' in product_data and product_data['BackgroundRecommendations']:
+            backgrounds = product_data['BackgroundRecommendations']
+            # Ensure we have the right number
+            backgrounds = backgrounds[:count]
+            logger.info(f"Using {len(backgrounds)} pre-generated contextual backgrounds from combined analysis")
+            return backgrounds
+        
+        # If not, fall back to making a separate API call
+        try:
+            # Extract relevant product information
+            product_description = product_data.get('Description', 'fashion product')
+            occasion = product_data.get('Occasion', 'general')
+            gender = product_data.get('Gender', 'women')
+            key_features = product_data.get('Key Features', [])
+            
+            # Format key features as a string
+            features_text = ""
+            if key_features:
+                if isinstance(key_features, list):
+                    features_text = ", ".join(key_features[:3])  # Take first 3 features
+                else:
+                    features_text = str(key_features)
+            
+            # Create prompt for background generation
+            prompt = f"""
+            Generate {count} unique and detailed background descriptions for a fashion photo shoot.
+            
+            PRODUCT INFORMATION:
+            - Description: {product_description}
+            - Occasion: {occasion}
+            - Gender: {gender}
+            - Key Features: {features_text}
+            
+            REQUIREMENTS:
+            1. Each background should complement the product and occasion
+            2. Include specific details like lighting, setting, and mood
+            3. No white or plain backgrounds
+            4. Diverse range of environments that match the product style
+            5. Professional photography quality
+            6. Each background should be different from others
+            7. Focus on creating immersive, lifestyle-appropriate scenes
+            
+            EXAMPLE FORMAT (do not use these exact examples):
+            - "Luxury boutique interior with soft ambient lighting and marble floors"
+            - "Urban rooftop terrace at golden hour with city skyline view"
+            - "Elegant garden party setting with string lights and floral arrangements"
+            
+            RETURN FORMAT:
+            Provide ONLY a JSON array of {count} strings, each being a unique background description.
+            Example: ["background1", "background2", "background3"]
+            """
+            
+            logger.info(f"Generating contextual backgrounds for: {product_description}")
+            
+            # Call Gemini API
+            response = await asyncio.to_thread(
+                self.gemini_client.models.generate_content,
+                model="gemini-2.0-flash-exp",
+                contents=prompt
+            )
+            
+            # Parse response
+            backgrounds_text = response.text
+            logger.info(f"Raw Gemini response for backgrounds: {backgrounds_text}")
+            
+            # Extract JSON array from response
+            json_match = re.search(r'\[.*\]', backgrounds_text, re.DOTALL)
+            if json_match:
+                backgrounds = json.loads(json_match.group(0))
+                # Ensure we have the right number and they're strings
+                backgrounds = [str(bg) for bg in backgrounds if isinstance(bg, str)][:count]
+                logger.info(f"Generated {len(backgrounds)} contextual backgrounds")
+                return backgrounds
+            else:
+                # Create dynamic backgrounds based on occasion if parsing fails
+                logger.warning("Failed to parse Gemini response, generating dynamic backgrounds based on occasion")
+                return self._generate_dynamic_backgrounds(occasion, count)
+                
+        except Exception as e:
+            logger.error(f"Failed to generate contextual backgrounds: {e}", exc_info=True)
+            # Fallback to minimal predefined backgrounds
+            return self._get_background_variations(product_data.get('Occasion', 'casual'))[:count]
+
+    def _generate_dynamic_backgrounds(self, occasion: str, count: int = 5) -> List[str]:
+        """
+        Generates dynamic background descriptions based on occasion when Gemini fails.
+        This creates varied backgrounds programmatically based on the occasion type.
+        """
+        # Base adjectives and settings for variety
+        adjectives = ["elegant", "modern", "stylish", "sophisticated", "contemporary", "luxurious", "trendy"]
+        lighting = ["natural lighting", "studio lighting", "ambient lighting", "soft lighting", "dramatic lighting"]
+        settings = ["indoor setting", "outdoor setting", "urban environment", "natural environment"]
+        
+        # Occasion-specific elements
+        occasion_elements = {
+            "casual": ["park", "cafe", "street", "home", "garden"],
+            "party": ["nightclub", "rooftop", "lounge", "celebration venue", "entertainment area"],
+            "wedding": ["ceremony venue", "reception hall", "garden setting", "chapel", "banquet hall"],
+            "beach": ["seaside", "coastal area", "shoreline", "tropical location", "oceanfront"],
+            "formal": ["business district", "corporate office", "upscale restaurant", "gala venue", "museum"]
         }
         
-        # Get background options based on occasion, defaulting to casual if not found
-        additional_backgrounds = occasion_backgrounds.get(
-            occasion.lower(),
-            occasion_backgrounds["casual"]
-        )
+        # Get elements for the specific occasion or default to casual
+        elements = occasion_elements.get(occasion.lower(), occasion_elements["casual"])
         
-        # Add three background variations
-        backgrounds.extend(additional_backgrounds[:3])
+        # Generate backgrounds
+        backgrounds = []
+        for i in range(count):
+            adj = adjectives[i % len(adjectives)]
+            light = lighting[i % len(lighting)]
+            setting = settings[i % len(settings)]
+            element = elements[i % len(elements)]
+            backgrounds.append(f"{adj} {element} with {light} in a {setting}")
         
-        return backgrounds[:4]  # Ensure we only return 4 variations
+        return backgrounds
 
-    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16", gender: str = None) -> str:
+    def _get_background_variations(self, occasion: str) -> List[str]:
+        """
+        Generates dynamic background variations using Gemini AI based on the occasion.
+        This is a fallback method that should not be called if Gemini is working properly.
+        """
+        logger.warning("Gemini failed to generate backgrounds, using fallback background variations")
+        # Base backgrounds - minimal fallback options
+        backgrounds = [
+            "professional studio with soft lighting",
+            "neutral gradient background",
+            "subtle textured background",
+            "minimalist lifestyle setting"
+        ]
+        
+        return backgrounds
+
+    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16", gender: str = None, view: str = None) -> str:
         """
         Creates a specific prompt for each background variation.
         """
@@ -110,52 +218,139 @@ class ImageGenerator:
             else:
                 model_type = "Indian woman"  # Default to woman
         
-        # Map aspect ratio to descriptive text
+        # Map aspect ratio to descriptive text with explicit emphasis
         aspect_ratio_descriptions = {
-            "1:1": "square aspect ratio (1:1, equal width and height)",
-            "16:9": "landscape orientation with 16:9 aspect ratio (width 1.78x height)",
-            "4:3": "landscape orientation with 4:3 aspect ratio (width 1.33x height)",
-            "3:4": "portrait orientation with 3:4 aspect ratio (height 1.33x width)",
-            "9:16": "portrait orientation with 9:16 aspect ratio (height 1.78x width)"
+            "1:1": "EXACTLY square aspect ratio (1:1, equal width and height) - CRITICALLY IMPORTANT: Generate a perfectly square image with no cropping or distortion",
+            "16:9": "EXACTLY landscape orientation with 16:9 aspect ratio (width 1.78x height) - CRITICALLY IMPORTANT: Generate a widescreen landscape image with precise 16:9 proportions",
+            "4:3": "EXACTLY landscape orientation with 4:3 aspect ratio (width 1.33x height) - CRITICALLY IMPORTANT: Generate a standard landscape image with precise 4:3 proportions",
+            "3:4": "EXACTLY portrait orientation with 3:4 aspect ratio (height 1.33x width) - CRITICALLY IMPORTANT: Generate a standard portrait image with precise 3:4 proportions",
+            "9:16": "EXACTLY portrait orientation with 9:16 aspect ratio (height 1.78x width) - CRITICALLY IMPORTANT: Generate a mobile-optimized portrait image with precise 9:16 proportions"
         }
         
-        aspect_description = aspect_ratio_descriptions.get(aspect_ratio, "portrait orientation with 9:16 aspect ratio (height 1.78x width)")
+        # Get the aspect description with fallback to 9:16 if not found
+        aspect_description = aspect_ratio_descriptions.get(aspect_ratio, aspect_ratio_descriptions["9:16"])
         
-        # Enhanced prompt with advanced fashion photography techniques
-        prompt = f"""
-Professional high-fashion photography of a single {model_type} model wearing the exact product from the reference images, positioned in a {background}.
+        # Get pose recommendation if available
+        # First check for view-specific poses
+        view_specific_poses = product_data.get('ViewSpecificPoses', {})
+        if view and view in view_specific_poses:
+            # Use the specific pose for this view
+            pose = view_specific_poses[view]
+        else:
+            # Fall back to general pose recommendations
+            pose_recommendations = product_data.get('RecommendedPoses', [])
+            if pose_recommendations:
+                # Randomly select one of the recommended poses for variety
+                import random
+                pose = random.choice(pose_recommendations)
+            else:
+                pose = "standing straight with confident, natural posture showcasing the outfit"
+        
+        # Check if this is a jeans product with distressing details
+        product_description = product_data.get('Description', '').lower()
+        is_jeans = 'jeans' in product_description or 'denim' in product_description
+        has_distressing = 'distress' in product_description or 'ripped' in product_description or 'destroyed' in product_description
+        
+        # Enhanced prompt with advanced fashion photography techniques and specific pose
+        if is_jeans and has_distressing:
+            # Specialized prompt for jeans with distressing details
+            prompt = f"""
+Professional high-fashion photography of a single {model_type} model wearing the exact pair of jeans shown in the reference images, positioned in a {background}.
 
 PHOTOGRAPHY DIRECTIVES:
 - Show ONLY ONE person in the image with professional studio lighting
 - Generate image with {aspect_description}
 - The background MUST completely fill the frame with no white borders or margins
-- Follow the reference images exactly for:
-  * Dress color, material, and design
-  * All design details (neckline, sleeves, hemline)
-  * Pattern and fabric texture
-  * Fit and silhouette
-  * Length and proportions
 
-ADVANCED FASHION PHOTOGRAPHY TECHNIQUES:
-- Use cinematic lighting with dramatic shadows to highlight fabric texture
-- Apply golden hour lighting principles for natural skin tones
-- Position model with confident, natural posture showcasing the outfit
-- Ensure perfect color matching between reference and generated clothing
-- Capture intricate details like stitching, embroidery, and fabric weave
-- Use shallow depth of field to focus on the garment while blurring background slightly
+CRITICALLY IMPORTANT: The generated image MUST show the EXACT SAME pair of jeans as in the reference images. Do NOT modify, change, or alter the jeans in any way.
 
-MODEL SPECIFICATIONS:
+The model MUST be wearing the identical jeans from the reference images with no changes to:
+  * Color, material, and design
+  * All distressing details (rips, tears, fading, whiskering, etc.)
+  * Specific distressing locations (knee tears, thigh rips, pocket wear, etc.)
+  * Fit and silhouette (skinny, straight, tapered, etc.)
+  * Wash type (dark, medium, light, black, etc.)
+  * Hardware details (buttons, rivets, zippers, etc.)
+  * Stitching patterns and thread color
+  * All visual elements and styling
+
+Use the reference images as the absolute source of truth for the jeans appearance.
+
+POSE AND MODEL SPECIFICATIONS:
+- Position model {pose}
 - {model_type.capitalize()} with professional runway modeling posture
 - Natural, confident facial expression with subtle smile
 - Perfect body proportions and professional posing
 - Skin tone and features appropriate for the {model_type} specification
 - No duplicate or repeated figures in the composition
 
-ENVIRONMENTAL INTEGRATION:
+BACKGROUND AND LIGHTING:
 - Background seamlessly extends to all edges of the image frame
 - Lighting matches the environment (natural for outdoor, studio for indoor)
 - Shadows and reflections consistent with the scene
 - Professional fashion editorial quality throughout
+
+CRITICAL RESTRICTIONS FOR JEANS WITH DISTRESSING:
+- DO NOT reinterpret or redesign the distressing pattern in any way
+- DO NOT change the location, size, or shape of any rips or tears
+- DO NOT add or remove any distressing details
+- DO NOT modify the wash pattern or fading effects
+- The jeans shown MUST be IDENTICAL to the reference images in ALL visual aspects
+- Focus ONLY on the background setting and model pose, not on jeans modification
+
+ASPECT RATIO ENFORCEMENT:
+- CRITICALLY IMPORTANT: Generate the image with EXACTLY {aspect_ratio} aspect ratio
+- DO NOT crop, stretch, or distort the image in any way
+- Ensure the composition fits perfectly within the {aspect_ratio} frame
+- Maintain all visual elements and proportions as specified
+"""
+        else:
+            # Standard prompt for other products
+            prompt = f"""
+Professional high-fashion photography of a single {model_type} model wearing the exact product shown in the reference images, positioned in a {background}.
+
+PHOTOGRAPHY DIRECTIVES:
+- Show ONLY ONE person in the image with professional studio lighting
+- Generate image with {aspect_description}
+- The background MUST completely fill the frame with no white borders or margins
+
+CRITICALLY IMPORTANT: The generated image MUST show the EXACT SAME product as in the reference images. Do NOT modify, change, or alter the product in any way.
+
+The model MUST be wearing the identical product from the reference images with no changes to:
+  * Color, material, and design
+  * All design details (neckline, sleeves, hemline, patterns, textures)
+  * Fit and silhouette
+  * Length and proportions
+  * All visual elements and styling
+
+Use the reference images as the absolute source of truth for the product appearance.
+
+POSE AND MODEL SPECIFICATIONS:
+- Position model {pose}
+- {model_type.capitalize()} with professional runway modeling posture
+- Natural, confident facial expression with subtle smile
+- Perfect body proportions and professional posing
+- Skin tone and features appropriate for the {model_type} specification
+- No duplicate or repeated figures in the composition
+
+BACKGROUND AND LIGHTING:
+- Background seamlessly extends to all edges of the image frame
+- Lighting matches the environment (natural for outdoor, studio for indoor)
+- Shadows and reflections consistent with the scene
+- Professional fashion editorial quality throughout
+
+CRITICAL RESTRICTIONS:
+- DO NOT reinterpret or redesign the product in any way
+- DO NOT change any visual aspects of the product (color, pattern, texture, fit, etc.)
+- DO NOT add or remove any design elements from the product
+- The product shown MUST be IDENTICAL to the reference images in ALL visual aspects
+- Focus ONLY on the background setting and model pose, not on product modification
+
+ASPECT RATIO ENFORCEMENT:
+- CRITICALLY IMPORTANT: Generate the image with EXACTLY {aspect_ratio} aspect ratio
+- DO NOT crop, stretch, or distort the image in any way
+- Ensure the composition fits perfectly within the {aspect_ratio} frame
+- Maintain all visual elements and proportions as specified
 """
         logger.info(f"Generated prompt for background '{background}' with aspect ratio '{aspect_ratio}' and gender '{gender}': {prompt}")
         return prompt
@@ -367,36 +562,24 @@ ENVIRONMENTAL INTEGRATION:
                 if image_bytes:
                     all_variations[f"{view}_plain_{i+1}"] = image_bytes
 
-            # Generate random lifestyle background images
-            occasions = [
-                "modern urban cafe with natural lighting",
-                "peaceful garden setting with soft sunlight",
-                "contemporary living room with large windows",
-                "elegant evening party venue with warm lighting",
-                "upscale rooftop lounge at sunset",
-                "luxurious indoor party setting with ambient lighting",
-                "grand wedding venue with decorative elements",
-                "outdoor garden wedding setup",
-                "elegant ballroom with chandeliers",
-                "scenic beach during golden hour",
-                "tropical resort poolside",
-                "beachfront terrace with ocean view",
-                "sophisticated hotel lobby",
-                "upscale restaurant interior",
-                "classic architectural backdrop"
-            ]
-            
-            for i in range(min(random_count, len(occasions))):
-                occasion = occasions[i]
-                prompt = self._create_generation_prompt(
+            # Generate random lifestyle background images using Gemini-based contextual backgrounds
+            if random_count > 0:
+                # Generate contextual backgrounds using Gemini
+                contextual_backgrounds = await self._generate_contextual_backgrounds(
                     product_data, 
-                    f"{view} view in a {occasion}", 
-                    aspect_ratio,
-                    gender  # Pass gender parameter
+                    count=random_count
                 )
-                image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
-                if image_bytes:
-                    all_variations[f"{view}_random_{i+1}"] = image_bytes
+                
+                for i, background_desc in enumerate(contextual_backgrounds):
+                    prompt = self._create_generation_prompt(
+                        product_data, 
+                        f"{view} view in a {background_desc}", 
+                        aspect_ratio,
+                        gender  # Pass gender parameter
+                    )
+                    image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
+                    if image_bytes:
+                        all_variations[f"{view}_random_{i+1}"] = image_bytes
 
         if not all_variations:
             raise ValueError("Image generation failed to produce any variations.")
@@ -460,19 +643,28 @@ ENVIRONMENTAL INTEGRATION:
                 reference_images.append(detail_view_path)
 
             # Generate the requested number of outputs with different backgrounds/occasions
-            occasions = ["social_gathering", "formal_event", "casual_outing", "party_venue", "outdoor_setting", "studio_portrait"]
+            # Use Gemini to generate contextual backgrounds
+            contextual_backgrounds = await self._generate_contextual_backgrounds(
+                product_data, 
+                count=number_of_outputs
+            )
             
             # Generate number_of_outputs variations (minimum 1, maximum as requested)
-            for i in range(min(number_of_outputs, len(occasions))):
-                occasion = occasions[i]
-                prompt = self._create_generation_prompt(product_data, f"frontside view for a {occasion.replace('_', ' ')}", aspect_ratio, gender)
+            for i in range(min(number_of_outputs, len(contextual_backgrounds))):
+                background_desc = contextual_backgrounds[i]
+                prompt = self._create_generation_prompt(
+                    product_data, 
+                    f"frontside view in a {background_desc}", 
+                    aspect_ratio, 
+                    gender
+                )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     # Give it a unique name based on the output number
                     if i == 0:
-                        all_variations[f"frontside_{occasion}"] = image_bytes
+                        all_variations[f"frontside_contextual_{i+1}"] = image_bytes
                     else:
-                        all_variations[f"output_{i+1}_{occasion}"] = image_bytes
+                        all_variations[f"output_{i+1}_contextual"] = image_bytes
         
         if not all_variations:
             raise ValueError("Image generation failed to produce any variations.")

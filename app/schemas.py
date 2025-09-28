@@ -16,6 +16,7 @@ class GenerationRequest(BaseModel):
     upscale: bool = True
     numberOfOutputs: int = 1
     generateCsv: bool = True
+    aspectRatio: str = "9:16"  # Add aspect ratio field with default value
 
 class GenerationResult(BaseModel):
     image_variations: List[str] = []  # All gemini generated images

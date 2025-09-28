@@ -311,30 +311,16 @@ class ConcurrentImageGenerator(ImageGenerator):
                 )
                 tasks.append(task)
 
-            # Random lifestyle background tasks
-            occasions = [
-                "modern urban cafe with natural lighting",
-                "peaceful garden setting with soft sunlight", 
-                "contemporary living room with large windows",
-                "elegant evening party venue with warm lighting",
-                "upscale rooftop lounge at sunset",
-                "luxurious indoor party setting with ambient lighting",
-                "grand wedding venue with decorative elements",
-                "outdoor garden wedding setup",
-                "elegant ballroom with chandeliers",
-                "scenic beach during golden hour",
-                "tropical resort poolside",
-                "beachfront terrace with ocean view",
-                "sophisticated hotel lobby",
-                "upscale restaurant interior",
-                "classic architectural backdrop"
-            ]
+            # Random lifestyle background tasks - use Gemini to generate contextual backgrounds
+            contextual_backgrounds = await super()._generate_contextual_backgrounds(
+                product_data, 
+                count=random_count
+            )
             
-            for i in range(min(random_count, len(occasions))):
-                occasion = occasions[i]
+            for i, background_desc in enumerate(contextual_backgrounds):
                 prompt = self._create_generation_prompt(
                     product_data, 
-                    f"{view} view in a {occasion}", 
+                    f"{view} view in a {background_desc}", 
                     aspect_ratio,
                     gender
                 )
