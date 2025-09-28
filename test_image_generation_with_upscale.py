@@ -12,7 +12,7 @@ ENDPOINT = "/api/v1/generate/image"
 def test_image_generation_with_upscale():
     """Test image generation with upscaling enabled"""
     
-    # Test data with background arrays for single view
+    # Test data with background arrays for single viewdw
     test_data = {
         "inputImages": [
             {
