@@ -2,15 +2,15 @@
   "openapi": "3.1.0",
   "tags": [
     {
-      "name": "ratnawnai",
+      "name": "LystroAi",
       "description": "Turn your merchandise into a photographic sharable masterpieces."
     }
   ],
   "info": {
-    "agentName": "ratnawnai",
-    "agentPath": "@microagent/ratnawnai",
+    "agentName": "LystroAi",
+    "agentPath": "@microagent/LystroAi",
     "iconUrl": "https://raw.githubusercontent.com/microfox-ai/microfox/refs/heads/main/logos/sparkboard.svg",
-    "title": "Ratnawnai",
+    "title": "LystroAi",
     "description": "Turn your merchandise into a photographic sharable masterpieces.",
     "status": "stable",
     "version": "1.0.0",
@@ -20,9 +20,9 @@
     },
     "agentCard": {
       "protocolVersion": "0.2.5",
-      "name": "Ratnawnai",
+      "name": "LystroAi",
       "description": "Turn your merchandise into a photographic sharable masterpieces.",
-      "url": "https://ratnawnai.microfox.app",
+      "url": "https://LystroAi.microfox.app",
       "iconUrl": "https://raw.githubusercontent.com/microfox-ai/microfox/refs/heads/main/logos/sparkboard.svg",
       "provider": {
         "organization": "Microfox",
@@ -81,7 +81,7 @@
   ],
   "servers": [
     {
-      "url": "https://api.microfox.com/agents/ratnawnai",
+      "url": "https://api.microfox.com/agents/LystroAi",
       "description": "Production server"
     }
   ],
@@ -590,7 +590,7 @@
         }
       }
     },
-    "/ratnawnai/fashionai": {
+    "/LystroAi/fashionai": {
       "get": {
         "summary": "Get status of a conversion request",
         "operationId": "getConversionStatus",
@@ -600,7 +600,7 @@
         ],
         "security": [
           {
-            "RATNAWNAI_API_KEY": []
+            "LystroAi_API_KEY": []
           }
         ],
         "parameters": [
@@ -662,7 +662,7 @@
                               },
                               "imageSrc": {
                                 "type": "string",
-                                "example": "https://s3.amazonaws.com/ratnawnai/fashionai/1234567890/1234567890.jpg"
+                                "example": "https://s3.amazonaws.com/LystroAi/fashionai/1234567890/1234567890.jpg"
                               },
                               "shotType": {
                                 "type": "string",
@@ -698,11 +698,11 @@
                                   "properties": {
                                     "inputImageSrc": {
                                       "type": "string",
-                                      "example": "https://ratnawnai.blr1.cdn.digitaloceanspaces.com/tests/8.jpg"
+                                      "example": "https://LystroAi.blr1.cdn.digitaloceanspaces.com/tests/8.jpg"
                                     },
                                     "savedImageSrc": {
                                       "type": "string",
-                                      "example": "https://ratnawnai.blr1.cdn.digitaloceanspaces.com/fashionai_1755005879805_8x1pf3o0y/fashionai_1755005879805_8x1pf3o0y-0-ref.jpg"
+                                      "example": "https://LystroAi.blr1.cdn.digitaloceanspaces.com/fashionai_1755005879805_8x1pf3o0y/fashionai_1755005879805_8x1pf3o0y-0-ref.jpg"
                                     }
                                   }
                                 }
@@ -738,7 +738,7 @@
                               },
                               "videoUrl": {
                                 "type": "string",
-                                "example": "https://s3.amazonaws.com/ratnawnai/fashionai/1234567890/1234567890.mp4"
+                                "example": "https://s3.amazonaws.com/LystroAi/fashionai/1234567890/1234567890.mp4"
                               }
                             }
                           }
@@ -834,7 +834,7 @@
         "description": "This endpoint analyzes product images, enriches them with AI-generated details, and creates marketing assets by combining them with suitable backgrounds and camera shots.",
         "security": [
           {
-            "RATNAWNAI_API_KEY": []
+            "LystroAi_API_KEY": []
           }
         ],
         "requestBody": {
@@ -944,7 +944,7 @@
         }
       }
     },
-    "/ratnawnai/fashionai/fix": {
+    "/LystroAi/fashionai/fix": {
       "post": {
         "operationId": "postConvertSpecialPipeline1Fix",
         "tags": [
@@ -954,7 +954,7 @@
         "description": "This endpoint re-triggers the image generation process for specified image IDs with additional feedback, skipping the initial product analysis.",
         "security": [
           {
-            "RATNAWNAI_API_KEY": []
+            "LystroAi_API_KEY": []
           }
         ],
         "requestBody": {
@@ -1020,7 +1020,7 @@
         }
       }
     },
-    "/ratnawnai/fashionai/video": {
+    "/LystroAi/fashionai/video": {
       "post": {
         "operationId": "postImageToVideo",
         "tags": [
@@ -1030,7 +1030,7 @@
         "description": "This endpoint takes an image URL and a conversion ID and generates a video using Kling AI via an SQS queue.",
         "security": [
           {
-            "RATNAWNAI_API_KEY": []
+            "LystroAi_API_KEY": []
           }
         ],
         "requestBody": {
@@ -1087,7 +1087,7 @@
   },
   "components": {
     "securitySchemes": {
-      "RATNAWNAI_API_KEY": {
+      "LystroAi_API_KEY": {
         "type": "apiKey",
         "in": "header",
         "name": "x-api-key"

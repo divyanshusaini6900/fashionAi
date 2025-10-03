@@ -131,8 +131,8 @@ Analyze the images and description thoroughly to generate the required product d
    - Consider cultural appropriateness, product functionality, and aesthetic appeal
    - Provide 2-3 pose recommendations with brief descriptions
 
-5. **Distressing Details (for jeans only)**:
-   - If the product is jeans, analyze and specify the exact distressing details
+5. **Distressing Details (for Jeans only)**:
+   - If the product is Jeans, analyze and specify the exact distressing details
    - Include precise locations of distressing (knee, thigh, pocket area, etc.)
    - Describe the type of distressing (ripped, faded, worn, etc.)
    - Specify the severity level (light, medium, heavy)
@@ -142,12 +142,12 @@ Analyze the images and description thoroughly to generate the required product d
 2. Use the provided SKU_ID: {sku_id}
 3. Ensure the output is a valid JSON object.
 
-**EXAMPLE OUTPUT FORMAT FOR JEANS:**
+**EXAMPLE OUTPUT FORMAT FOR Jeans:**
 ```json
 {{
     "product_data": {{
         "SKU_ID": "{sku_id}",
-        "Description": "Trendy ripped jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
+        "Description": "Trendy ripped Jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
         "Key Features": [
             "Authentic denim fabric with comfortable stretch",
             "Strategically placed distressing for a trendy look",
@@ -337,8 +337,8 @@ Analyze the images and description thoroughly to generate the required product d
    - Consider cultural appropriateness, product functionality, and aesthetic appeal
    - Provide 2-3 pose recommendations with brief descriptions
 
-5. **Distressing Details (for jeans only)**:
-   - If the product is jeans, analyze and specify the exact distressing details
+5. **Distressing Details (for Jeans only)**:
+   - If the product is Jeans, analyze and specify the exact distressing details
    - Include precise locations of distressing (knee, thigh, pocket area, etc.)
    - Describe the type of distressing (ripped, faded, worn, etc.)
    - Specify the severity level (light, medium, heavy)
@@ -348,12 +348,12 @@ Analyze the images and description thoroughly to generate the required product d
 2.  Use the provided SKU_ID.
 3.  Ensure the output is a valid JSON object.
 
-**EXAMPLE OUTPUT FORMAT FOR JEANS:**
+**EXAMPLE OUTPUT FORMAT FOR Jeans:**
 ```json
 {{
     "product_data": {{
         "SKU_ID": "gen-prod-a1b2c3d4",
-        "Description": "Trendy ripped jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
+        "Description": "Trendy ripped Jeans with fashionable distressing details. Perfect for casual outings and streetwear looks.",
         "Key Features": [
             "Authentic denim fabric with comfortable stretch",
             "Strategically placed distressing for a trendy look",

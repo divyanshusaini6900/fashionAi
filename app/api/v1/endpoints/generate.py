@@ -1,5 +1,5 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Request
-from typing import List, Optional, Dict
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Request, Depends
+from typing import List, Optional, Dict, Any
 import uuid
 import os
 import logging
@@ -11,6 +11,7 @@ from app.schemas import GenerationResponse, ProcessingStatus, ErrorResponse, Gen
 from app.services.workflow_manager import WorkflowManager
 from app.services.parallel_workflow_manager import ParallelWorkflowManager
 from app.services.task_queue import task_queue
+from app.core.api_key_middleware import verify_api_key
 import json
 
 # Configure logging
@@ -22,11 +23,12 @@ workflow_manager = ParallelWorkflowManager()
 
 @router.post(
     "/generate/image",
-    response_model=GenerationResponse,
+    response_model=Dict[str, Any],  # Changed from GenerationResponse for immediate response
     responses={
         400: {"model": ErrorResponse},
         500: {"model": ErrorResponse}
-    }
+    },
+    dependencies=[Depends(verify_api_key)]
 )
 async def generate_fashion_image(
     background_tasks: BackgroundTasks,
@@ -47,80 +49,50 @@ async def generate_fashion_image(
         json_data = await request.json()
         generation_request = GenerationRequest(**json_data)
         
-        # Extract gender parameter with validation
-        gender = generation_request.gender if hasattr(generation_request, 'gender') else None
-        if gender and gender.lower() not in ['male', 'female']:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid gender parameter. Must be 'male' or 'female'."
-            )
+        # Extract gender parameter with validation - accept woman/man and convert to female/male
+        gender_raw = generation_request.gender if hasattr(generation_request, 'gender') else None
+        if gender_raw:
+            gender_map = {'woman': 'female', 'man': 'male', 'female': 'female', 'male': 'male'}
+            gender = gender_map.get(gender_raw.lower(), None)
+            if not gender:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid gender parameter. Must be 'male', 'female', 'man', or 'woman'."
+                )
+        else:
+            gender = None
         
         # Extract upscale parameter (default to True)
         upscale = getattr(generation_request, 'upscale', True)
         
+        # Extract aspect ratio parameter (default to "9:16")
+        aspect_ratio = getattr(generation_request, 'aspectRatio', '9:16')
+        valid_aspect_ratios = ["1:1", "16:9", "4:3", "3:4", "9:16"]
+        if aspect_ratio not in valid_aspect_ratios:
+            aspect_ratio = "9:16"  # Default to 9:16 if invalid
+        
         # Generate a unique request ID
         request_id = str(uuid.uuid4())
         
-        # Download images from URLs and save them
-        saved_paths_dict = {}
-        background_config = {}
+        # 🚀 RETURN CONVERSION ID IMMEDIATELY - Process in background
+        logger.info(f"📥 Received request, returning conversion_id immediately: {request_id}")
         
-        for input_image in generation_request.inputImages:
-            # Download image from URL
-            import requests
-            response = requests.get(input_image.url)
-            response.raise_for_status()
-            
-            # Save image to temporary location using existing settings
-            temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
-            temp_dir.mkdir(parents=True, exist_ok=True)
-            image_path = temp_dir / f"{input_image.view}.jpg"
-            
-            with open(image_path, "wb") as f:
-                f.write(response.content)
-            
-            saved_paths_dict[input_image.view] = str(image_path)
-            background_config[input_image.view] = input_image.backgrounds
-        
-        # Schedule cleanup of temporary files
-        background_tasks.add_task(cleanup_temp_files, request_id)
-        
-        # Process through parallel workflow manager with background array support
-        logger.info(f"Starting parallel workflow process with background array for request_id: {request_id}")
-        result = await workflow_manager.process_request_with_background_array_parallel(
-            image_paths=saved_paths_dict,
-            background_config=background_config,
-            text_description=generation_request.text,
+        # Start background processing
+        background_tasks.add_task(
+            process_generation_in_background,
             request_id=request_id,
-            username="api_user",  # Default username for API requests
-            product=generation_request.productType,
-            isVideo=generation_request.isVideo,
-            number_of_outputs=generation_request.numberOfOutputs,
-            aspect_ratio="9:16",  # Default aspect ratio
-            gender=gender,  # Pass gender parameter
-            upscale=upscale  # Pass upscale parameter
+            generation_request=generation_request,
+            gender=gender,
+            upscale=upscale,
+            aspect_ratio=aspect_ratio
         )
         
-        logger.info(f"Workflow completed for request_id: {request_id}")
-        logger.info(f"Result keys: {list(result.keys()) if result else 'None'}")
-        
-        # Ensure we have the required fields
-        excel_report_url = result.get("excel_report_url") or ""
-        
-        if not excel_report_url:
-            logger.warning(f"No excel_report_url in result for {request_id}")
-        
-        response = GenerationResponse(
-            request_id=request_id,
-            image_variations=result.get("image_variations", []),
-            upscale_image=result.get("upscale_image", []),  # Upscaled images when upscale=True
-            output_video_url=result.get("output_video_url"),
-            excel_report_url=excel_report_url,
-            metadata=result.get("metadata", {})
-        )
-        
-        logger.info(f"Returning response for {request_id}: {type(response)}")
-        return response
+        # Return conversion ID immediately for polling (Flutter app expects 'id')
+        return {
+            'id': request_id,
+            'status': 'processing',
+            'message': 'Generation started successfully'
+        }
         
     except HTTPException as e:
         # Re-raise HTTP exceptions
@@ -137,7 +109,8 @@ async def generate_fashion_image(
     responses={
         400: {"model": ErrorResponse},
         500: {"model": ErrorResponse}
-    }
+    },
+    dependencies=[Depends(verify_api_key)]
 )
 async def generate_fashion(
     background_tasks: BackgroundTasks,
@@ -365,6 +338,113 @@ def get_file_type(filename: str) -> str:
         return 'pdf'
     else:
         return 'other'
+
+# Dictionary to store generation results for polling
+generation_results = {}
+
+async def process_generation_in_background(
+    request_id: str,
+    generation_request,
+    gender: str,
+    upscale: bool,
+    aspect_ratio: str
+):
+    """Background task to process the generation"""
+    try:
+        logger.info(f"🔄 Starting background processing for request_id: {request_id}")
+        
+        # Initialize result status (using 'id' for Flutter app compatibility)
+        generation_results[request_id] = {
+            'id': request_id,
+            'status': 'processing',
+            'progress': 0.2,
+            'message': 'Downloading images...'
+        }
+        
+        # Download images from URLs and save them
+        saved_paths_dict = {}
+        background_config = {}
+        
+        for input_image in generation_request.inputImages:
+            # Download image from URL
+            import requests
+            response = requests.get(input_image.url)
+            response.raise_for_status()
+            
+            # Save image to temporary location using existing settings
+            temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            image_path = temp_dir / f"{input_image.view}.jpg"
+            
+            with open(image_path, "wb") as f:
+                f.write(response.content)
+            
+            saved_paths_dict[input_image.view] = str(image_path)
+            background_config[input_image.view] = input_image.backgrounds
+        
+        logger.info(f"📸 Downloaded {len(saved_paths_dict)} images for request_id: {request_id}")
+        
+        # Update progress
+        generation_results[request_id]['progress'] = 0.4
+        generation_results[request_id]['message'] = 'Generating AI content...'
+        
+        # Process through parallel workflow manager with background array support
+        logger.info(f"Starting parallel workflow process with background array for request_id: {request_id}")
+        result = await workflow_manager.process_request_with_background_array_parallel(
+            image_paths=saved_paths_dict,
+            background_config=background_config,
+            text_description=generation_request.text,
+            request_id=request_id,
+            username="api_user",
+            product=generation_request.productType,
+            isVideo=generation_request.isVideo,
+            number_of_outputs=generation_request.numberOfOutputs,
+            aspect_ratio=aspect_ratio,
+            gender=gender,
+            upscale=upscale
+        )
+        
+        logger.info(f"✅ Workflow completed for request_id: {request_id}")
+        
+        # Store completed result (using 'id' for Flutter app compatibility)
+        generation_results[request_id] = {
+            'id': request_id,
+            'status': 'completed',
+            'output': result
+        }
+        
+        # Clean up temp files
+        import shutil
+        temp_dir = Path(settings.BASE_DIR) / settings.UPLOAD_DIR / request_id
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+            
+    except Exception as e:
+        logger.error(f"❌ Error processing request_id {request_id}: {e}", exc_info=True)
+        generation_results[request_id] = {
+            'id': request_id,
+            'status': 'failed',
+            'error': str(e)
+        }
+
+@router.get("/generate/image", dependencies=[Depends(verify_api_key)])
+async def check_generation_status(id: str = None):
+    """
+    Check the status of a generation job (for polling)
+    """
+    if not id:
+        raise HTTPException(status_code=400, detail="Missing 'id' parameter")
+    
+    request_id = id
+    
+    if request_id not in generation_results:
+        raise HTTPException(status_code=404, detail=f"Request {request_id} not found")
+    
+    result = generation_results[request_id]
+    
+    logger.info(f"📊 Status check for {request_id}: {result.get('status')}")
+    
+    return result
 
 @router.get("/status/queue")
 async def get_queue_status():

@@ -1,5 +1,5 @@
 """
-Test script for jeans distressing details feature
+Test script for Jeans distressing details feature
 """
 import asyncio
 import logging
@@ -10,15 +10,15 @@ from app.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def test_jeans_distressing():
-    """Test the jeans distressing details feature"""
+async def test_Jeans_distressing():
+    """Test the Jeans distressing details feature"""
     # Create an image generator instance
     image_generator = ImageGenerator()
     
-    # Sample product data for jeans with distressing details
-    product_data_jeans = {
+    # Sample product data for Jeans with distressing details
+    product_data_Jeans = {
         "Title": "Ripped Skinny Jeans",
-        "Description": "Trendy ripped jeans with fashionable distressing details",
+        "Description": "Trendy ripped Jeans with fashionable distressing details",
         "Occasion": "casual",
         "Gender": "Men",
         "DistressingDetails": [
@@ -44,12 +44,12 @@ async def test_jeans_distressing():
     }
     
     # Test the prompt generation with distressing information
-    logger.info("Testing prompt generation with jeans distressing details...")
+    logger.info("Testing prompt generation with Jeans distressing details...")
     
     try:
         # Generate a prompt with distressing details
         prompt = image_generator._create_generation_prompt(
-            product_data=product_data_jeans,
+            product_data=product_data_Jeans,
             background="urban street setting with brick wall",
             aspect_ratio="9:16",
             gender="male"
@@ -86,8 +86,8 @@ async def test_jeans_distressing():
         logger.info("✓ Regular product (no distressing) test passed")
         
     except Exception as e:
-        logger.error(f"Error in jeans distressing test: {e}")
+        logger.error(f"Error in Jeans distressing test: {e}")
         raise
 
 if __name__ == "__main__":
-    asyncio.run(test_jeans_distressing())
+    asyncio.run(test_Jeans_distressing())

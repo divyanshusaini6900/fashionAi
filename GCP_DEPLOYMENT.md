@@ -103,6 +103,9 @@ OPENAI_API_KEY="your-real-openai-api-key-here"
 REPLICATE_API_TOKEN="your-real-replicate-api-token-here"
 GEMINI_API_KEY="your-real-gemini-api-key-here"
 
+# Service API Key for x-api-key authentication
+SERVICE_API_KEY="your-custom-service-api-key"
+
 # Storage Configuration (Local Storage for now)
 USE_LOCAL_STORAGE="true"
 LOCAL_BASE_URL="http://localhost:8000"
@@ -234,6 +237,26 @@ You should see the service is active (running). Press `Ctrl + C` to stop viewing
 1. Go to `http://YOUR-IP-ADDRESS/docs` to see the API documentation
 2. Try the health check endpoint by clicking "Try it out" and then "Execute"
 
+### 9.3 Test API Key Authentication
+The Fashion AI API now supports `x-api-key` authentication for enhanced security. You can use any of the following as valid API keys:
+- Your `OPENAI_API_KEY`
+- Your `REPLICATE_API_TOKEN`
+- Your `GEMINI_API_KEY`
+- Your custom `SERVICE_API_KEY`
+
+To test with API key authentication:
+1. Go to `http://YOUR-IP-ADDRESS/docs`
+2. Find the "POST /api/v1/generate" or "POST /api/v1/generate/image" endpoint
+3. Click "Try it out"
+4. Add the `x-api-key` header with one of your valid API keys
+5. Fill in the required parameters
+6. Click "Execute"
+
+For production deployments, it's recommended to:
+1. Set `ENVIRONMENT=production` in your `.env` file
+2. Use a dedicated `SERVICE_API_KEY` rather than reusing other service keys
+3. Generate a strong, unique API key for your service
+
 ## Step 10: Set Up Cloud Storage (Optional but Recommended)
 
 If you want to store files in the cloud instead of on your VM (recommended for production):
@@ -311,6 +334,9 @@ OPENAI_API_KEY="your-real-openai-api-key-here"
 REPLICATE_API_TOKEN="your-real-replicate-api-token-here"
 GEMINI_API_KEY="your-real-gemini-api-key-here"
 
+# Service API Key for x-api-key authentication
+SERVICE_API_KEY="your-custom-service-api-key"
+
 # Storage Configuration (Cloud Storage)
 USE_LOCAL_STORAGE="false"
 GCS_BUCKET_NAME="fashion-ai-storage"
@@ -363,14 +389,19 @@ sudo systemctl restart fashion_ai
    - Key: `text`, Value: "woman dress, stylish, elegant, event wear"
    - Key: `username`, Value: "test_user"
    - Key: `product`, Value: "dress"
-6. Click "Send"
-7. Wait for the response (this may take 30-60 seconds)
+6. Go to the "Headers" tab
+7. Add a new header:
+   - Key: `x-api-key`
+   - Value: [Your API key (OPENAI_API_KEY, REPLICATE_API_TOKEN, or SERVICE_API_KEY)]
+8. Click "Send"
+9. Wait for the response (this may take 30-60 seconds)
 
 ### 11.3 Using cURL from Command Line
 You can also test using cURL from any terminal:
 ```bash
 curl -X POST "http://YOUR-IP-ADDRESS/api/v1/generate" \
   -H "accept: application/json" \
+  -H "x-api-key: your-service-api-key" \
   -H "Content-Type: multipart/form-data" \
   -F "frontside=@/path/to/your/image.jpg" \
   -F "text=woman dress, stylish, elegant, event wear" \
@@ -555,7 +586,6 @@ Remember:
 - Restart service: `sudo systemctl restart fashion_ai`
 - View logs: `sudo journalctl -u fashion_ai -f`
 - Update code: `git pull` then `sudo systemctl restart fashion_ai`
-- Check Nginx: `sudo systemctl status nginx`
 
 If you ever need to make changes to your configuration:
 1. Edit the `.env` file: `nano .env`

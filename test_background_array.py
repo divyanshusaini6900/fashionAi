@@ -4,6 +4,11 @@ Test script for the background array feature with single view image
 """
 import requests
 import json
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
 BASE_URL = "http://127.0.0.1:8000"
@@ -11,6 +16,9 @@ ENDPOINT = "/api/v1/generate/image"
 
 def test_background_array_feature():
     """Test the background array feature with single view image"""
+    
+    # Get API key from environment
+    api_key = os.getenv("SERVICE_API_KEY", "fashion-ai-service-key")
     
     # Test data with background arrays for single view
     test_data = {
@@ -37,13 +45,15 @@ def test_background_array_feature():
         print("📝 REQUEST DETAILS:")
         print(f"   URL: {BASE_URL}{ENDPOINT}")
         print(f"   Method: POST")
+        print(f"   API Key: {api_key[:10]}...{api_key[-10:]}")  # Show partial key for security
         print("   JSON Data:")
         print(json.dumps(test_data, indent=2))
         
-        # Send the POST request
+        # Send the POST request with x-api-key header
         response = requests.post(
             f"{BASE_URL}{ENDPOINT}",
             json=test_data,
+            headers={"x-api-key": api_key},
             timeout=180  # 3 minutes timeout
         )
         

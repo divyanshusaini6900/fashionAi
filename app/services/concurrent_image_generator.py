@@ -172,7 +172,7 @@ class ConcurrentImageGenerator(ImageGenerator):
 
             # Extract occasion from product data for background generation
             occasion = product_data.get('Occasion', 'casual').lower()
-            dynamic_backgrounds = await self._get_background_variations(occasion, product_data)
+            dynamic_backgrounds = await self._get_background_variations(occasion, product_data, aspect_ratio)
             
             # Skip the first background (studio) and use the dynamic ones
             lifestyle_backgrounds = dynamic_backgrounds[1:] if len(dynamic_backgrounds) > 1 else dynamic_backgrounds
@@ -185,7 +185,8 @@ class ConcurrentImageGenerator(ImageGenerator):
                     product_data, 
                     f"frontside view in a {background_desc}", 
                     aspect_ratio, 
-                    gender
+                    gender,
+                    "frontside"
                 )
                 
                 task = ImageGenerationTask(
@@ -285,7 +286,8 @@ class ConcurrentImageGenerator(ImageGenerator):
                     product_data, 
                     f"{view} view in a clean white studio background", 
                     aspect_ratio,
-                    gender
+                    gender,
+                    view
                 )
                 task = ImageGenerationTask(
                     prompt=prompt,
@@ -303,7 +305,8 @@ class ConcurrentImageGenerator(ImageGenerator):
                     product_data, 
                     f"{view} view in a plain colored background", 
                     aspect_ratio,
-                    gender
+                    gender,
+                    view
                 )
                 task = ImageGenerationTask(
                     prompt=prompt,
@@ -318,7 +321,7 @@ class ConcurrentImageGenerator(ImageGenerator):
             # Random lifestyle background tasks using dynamic backgrounds from Gemini
             # Extract occasion from product data for background generation
             occasion = product_data.get('Occasion', 'casual').lower()
-            dynamic_backgrounds = await self._get_background_variations(occasion, product_data)
+            dynamic_backgrounds = await self._get_background_variations(occasion, product_data, aspect_ratio)
             
             # Skip the first background (studio) and use the dynamic ones
             lifestyle_backgrounds = dynamic_backgrounds[1:] if len(dynamic_backgrounds) > 1 else dynamic_backgrounds
@@ -329,7 +332,8 @@ class ConcurrentImageGenerator(ImageGenerator):
                     product_data, 
                     f"{view} view in a {background_desc}", 
                     aspect_ratio,
-                    gender
+                    gender,
+                    view
                 )
                 task = ImageGenerationTask(
                     prompt=prompt,

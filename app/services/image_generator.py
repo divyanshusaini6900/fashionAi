@@ -46,7 +46,51 @@ class ImageGenerator:
         
         logger.info(f"Image generation mode: {'Gemini' if settings.USE_GEMINI_FOR_IMAGES else 'Replicate'}")
 
-    async def _get_background_variations(self, occasion: str, product_data: Dict) -> List[str]:
+    def _get_view_specific_pose(self, view: str) -> str:
+        """
+        Returns pose recommendations based on the view of the image.
+        """
+        view_pose_mapping = {
+            "front": [
+                "Standing straight with arms relaxed at sides, showcasing the full front of the outfit",
+                "Confident pose with hands on hips, emphasizing the fit and design of the garment",
+                "Front-facing three-quarter view with slight body turn for dynamic composition"
+            ],
+            "back": [
+                "Standing straight with back facing camera, showing the complete back design",
+                "Casual pose with hands behind back, highlighting back details and fit",
+                "Three-quarter back view with slight turn to show side profile"
+            ],
+            "side": [
+                "Profile view showing the side silhouette of the outfit",
+                "Side view with one arm raised to showcase sleeve design",
+                "Dynamic side pose with weight on one leg for natural body curve"
+            ],
+            "detail": [
+                "Close-up pose focusing on specific garment details",
+                "Static pose allowing clear visibility of textures and patterns",
+                "Controlled positioning to highlight unique design elements"
+            ]
+        }
+        
+        # Normalize view names
+        normalized_view = view.lower().strip()
+        if normalized_view in ["frontside", "front"]:
+            pose_list = view_pose_mapping["front"]
+        elif normalized_view in ["backside", "back"]:
+            pose_list = view_pose_mapping["back"]
+        elif normalized_view in ["sideview", "side"]:
+            pose_list = view_pose_mapping["side"]
+        elif normalized_view in ["detailview", "detail"]:
+            pose_list = view_pose_mapping["detail"]
+        else:
+            # Default to front poses if view is not recognized
+            pose_list = view_pose_mapping["front"]
+            
+        # Return the first pose recommendation as a string
+        return pose_list[0] if pose_list else "Standing straight with natural posture showcasing the outfit"
+
+    async def _get_background_variations(self, occasion: str, product_data: Dict, aspect_ratio: str = "9:16") -> List[str]:
         """
         Dynamically generates background variations based on the occasion using Gemini AI.
         Returns a list of background descriptions.
@@ -54,19 +98,31 @@ class ImageGenerator:
         # Base backgrounds - always include a plain studio background
         backgrounds = ["clean studio with plain white background"]
         
+        # Map aspect ratio to descriptive text for background generation
+        aspect_ratio_descriptions = {
+            "1:1": "square format (equal width and height)",
+            "16:9": "wide landscape format (width 1.78x height)",
+            "4:3": "standard landscape format (width 1.33x height)",
+            "3:4": "portrait format (height 1.33x width)",
+            "9:16": "tall portrait format (height 1.78x width)"
+        }
+        
+        aspect_description = aspect_ratio_descriptions.get(aspect_ratio, "tall portrait format (height 1.78x width)")
+        
         # Only generate dynamic backgrounds if Gemini is enabled for images
         if settings.USE_GEMINI_FOR_IMAGES and hasattr(self, 'gemini_client'):
             try:
                 # Create a prompt for Gemini to generate background ideas
-                prompt = f"""You are a creative fashion photographer and set designer. Based on the following product information and occasion, generate 3 unique and creative background ideas that would perfectly complement this fashion item for a lifestyle photo shoot.
+                prompt = f"""You are a creative fashion photographer and set designer. Based on the following product information, occasion, and aspect ratio, generate 3 unique and creative background ideas that would perfectly complement this fashion item for a lifestyle photo shoot.
 
 Product Information:
 - Title: {product_data.get('Title', 'Fashion Item')}
 - Description: {product_data.get('Description', 'A stylish fashion item')}
 - Occasion: {occasion}
 - Ideal For: {product_data.get('Ideal For', 'General Use')}
+- Image Format: {aspect_description}
 
-Please provide 3 background descriptions that would enhance the visual appeal of this product for the specified occasion. Each background should be a complete, detailed description that a photographer could use directly. Make them creative and specific.
+Please provide 3 background descriptions that would enhance the visual appeal of this product for the specified occasion and aspect ratio. Each background should be a complete, detailed description that a photographer could use directly. Make them creative and specific. Consider how the aspect ratio affects the composition and background design.
 
 Return your response as a JSON array of 3 strings, like this:
 ["background1 description", "background2 description", "background3 description"]"""
@@ -176,7 +232,7 @@ Return your response as a JSON array of 3 strings, like this:
         
         return backgrounds[:4]  # Ensure we only return 4 variations
 
-    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16", gender: str = None) -> str:
+    def _create_generation_prompt(self, product_data: Dict, background: str, aspect_ratio: str = "9:16", gender: str = None, view: str = None) -> str:
         """
         Creates a specific prompt for each background variation.
         """
@@ -214,8 +270,15 @@ Return your response as a JSON array of 3 strings, like this:
         else:
             # Default pose guidance
             pose_description = "- Position model with confident, natural posture showcasing the outfit"
-        
-        # Check if this is a jeans product and get distressing details
+
+        # Get view-specific pose recommendations
+        if view:
+            pose_description = f"- Position model in a {self._get_view_specific_pose(view)}"
+        else:
+            # Use default pose guidance if no view is specified
+            pose_description = "- Position model with confident, natural posture showcasing the outfit"
+
+        # Check if this is a Jeans product and get distressing details
         distressing_details = product_data.get('DistressingDetails', [])
         distressing_description = ""
         if distressing_details and len(distressing_details) > 0:
@@ -456,7 +519,8 @@ ENVIRONMENTAL INTEGRATION:
                     product_data, 
                     f"{view} view in a clean white studio background", 
                     aspect_ratio,
-                    gender  # Pass gender parameter
+                    gender,  # Pass gender parameter
+                    view      # Pass view parameter for pose-specific generation
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -468,7 +532,8 @@ ENVIRONMENTAL INTEGRATION:
                     product_data, 
                     f"{view} view in a plain colored background", 
                     aspect_ratio,
-                    gender  # Pass gender parameter
+                    gender,  # Pass gender parameter
+                    view      # Pass view parameter for pose-specific generation
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -477,7 +542,7 @@ ENVIRONMENTAL INTEGRATION:
             # Generate random lifestyle background images using dynamic backgrounds from Gemini
             # Extract occasion from product data for background generation
             occasion = product_data.get('Occasion', 'casual').lower()
-            dynamic_backgrounds = await self._get_background_variations(occasion, product_data)
+            dynamic_backgrounds = await self._get_background_variations(occasion, product_data, aspect_ratio)
             
             # Skip the first background (studio) and use the dynamic ones
             lifestyle_backgrounds = dynamic_backgrounds[1:] if len(dynamic_backgrounds) > 1 else dynamic_backgrounds
@@ -488,7 +553,8 @@ ENVIRONMENTAL INTEGRATION:
                     product_data, 
                     f"{view} view in a {background_desc}", 
                     aspect_ratio,
-                    gender  # Pass gender parameter
+                    gender,  # Pass gender parameter
+                    view      # Pass view parameter for pose-specific generation
                 )
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
@@ -543,7 +609,7 @@ ENVIRONMENTAL INTEGRATION:
                 if detail_view_path:
                     reference_images.append(detail_view_path)
                 
-                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}", aspect_ratio, gender)
+                prompt = self._create_generation_prompt(product_data, f"{view} view in a {plain_background}", aspect_ratio, gender, view)
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     all_variations[view] = image_bytes
@@ -558,7 +624,7 @@ ENVIRONMENTAL INTEGRATION:
             # Generate the requested number of outputs with dynamic backgrounds from Gemini
             # Extract occasion from product data for background generation
             occasion = product_data.get('Occasion', 'casual').lower()
-            dynamic_backgrounds = await self._get_background_variations(occasion, product_data)
+            dynamic_backgrounds = await self._get_background_variations(occasion, product_data, aspect_ratio)
             
             # Skip the first background (studio) and use the dynamic ones
             lifestyle_backgrounds = dynamic_backgrounds[1:] if len(dynamic_backgrounds) > 1 else dynamic_backgrounds
@@ -568,7 +634,7 @@ ENVIRONMENTAL INTEGRATION:
                 background_desc = lifestyle_backgrounds[i]
                 # Clean up the background description for naming
                 clean_name = background_desc.replace(' ', '_').replace('-', '_')[:30]  # Limit length
-                prompt = self._create_generation_prompt(product_data, f"frontside view in a {background_desc}", aspect_ratio, gender)
+                prompt = self._create_generation_prompt(product_data, f"frontside view in a {background_desc}", aspect_ratio, gender, "frontside")
                 image_bytes = await self._run_image_generation(prompt, reference_images, aspect_ratio)
                 if image_bytes:
                     # Give it a unique name based on the background

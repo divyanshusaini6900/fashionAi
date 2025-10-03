@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for image generation with upscaling
+Test script for the aspect ratio and view-specific pose features
 """
 import requests
 import json
@@ -11,36 +11,37 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://127.0.0.1:8000"
 ENDPOINT = "/api/v1/generate/image"
 
-def test_image_generation_with_upscale():
-    """Test image generation with upscaling enabled"""
+def test_aspect_ratio_and_view_pose_features():
+    """Test the aspect ratio and view-specific pose features"""
     
     # Get API key from environment
     api_key = os.getenv("SERVICE_API_KEY", "fashion-ai-service-key")
     
-    # Test data with background arrays for single viewdw
+    # Test data with the exact request from the user
     test_data = {
         "inputImages": [
             {
                 "url": "https://firebasestorage.googleapis.com/v0/b/irongetnow-57465.appspot.com/o/WhatsApp%20Image%202025-09-19%20at%2011.35.31_d5ceb091.jpg?alt=media&token=ee5c5967-37c6-456a-9de0-02bd93689ae3",
                 "view": "front",
-                "backgrounds": [0, 0, 1]  # 1 random background
+                "backgrounds": [0, 0, 1]
             }
         ],
         "productType": "general",
         "gender": "male",
         "text": "",
         "isVideo": False,
-        "upscale": False,  # Enable upscaling
+        "upscale": False,
         "numberOfOutputs": 1,
         "generateCsv": True,
+        "aspectRatio": "9:16"  # Adding aspect ratio parameter
     }
     
     try:
-        print("🚀 Sending Request to API for Image Generation with Upscaling")
-        print("=" * 60)
+        print("🚀 Sending Request to API with Aspect Ratio and View-Specific Pose Features")
+        print("=" * 80)
         print("📝 REQUEST DETAILS:")
         print(f"   URL: {BASE_URL}{ENDPOINT}")
         print(f"   Method: POST")
@@ -53,7 +54,7 @@ def test_image_generation_with_upscale():
             f"{BASE_URL}{ENDPOINT}",
             json=test_data,
             headers={"x-api-key": api_key},
-            timeout=800  # 3 minutes timeout
+            timeout=180  # 3 minutes timeout
         )
         
         # Process response
@@ -71,28 +72,12 @@ def test_image_generation_with_upscale():
             print(f"\n📄 Summary:")
             print(f"   Request ID: {response_data.get('request_id', 'N/A')}")
             
-            # Show all image variations
             if 'image_variations' in response_data and response_data['image_variations']:
                 print(f"   🖼️ Image Variations ({len(response_data['image_variations'])} found):")
                 for i, variation in enumerate(response_data['image_variations'], 1):
                     print(f"     {i}. {variation}")
             else:
                 print(f"   ℹ️ No image variations generated")
-                
-            # Show all upscaled images
-            if 'upscale_image' in response_data and response_data['upscale_image']:
-                print(f"   🔍 Upscaled Images ({len(response_data['upscale_image'])} found):")
-                for i, upscaled in enumerate(response_data['upscale_image'], 1):
-                    print(f"     {i}. {upscaled}")
-            else:
-                print(f"   ℹ️ No upscaled images generated")
-                
-            # Check if images were upscaled
-            metadata = response_data.get('metadata', {})
-            if metadata.get('upscaled'):
-                print(f"   📈 Images were upscaled: ✅")
-            else:
-                print(f"   📈 Images were upscaled: ❌")
                 
             if 'excel_report_url' in response_data and response_data['excel_report_url']:
                 print(f"   📊 Excel Report: {response_data['excel_report_url']}")
@@ -127,10 +112,10 @@ def test_image_generation_with_upscale():
         return False
 
 if __name__ == "__main__":
-    print("🧪 Testing FashionModelingAI Image Generation with Upscaling")
-    print("=" * 60)
+    print("🧪 Testing FashionModelingAI Aspect Ratio and View-Specific Pose Features")
+    print("=" * 80)
     
-    # Test with single view image
-    success = test_image_generation_with_upscale()
+    # Test with the specific request
+    success = test_aspect_ratio_and_view_pose_features()
     
     print(f"\n{'✅ TEST PASSED' if success else '❌ TEST FAILED'}")

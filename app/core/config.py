@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     REPLICATE_API_TOKEN: str
     GEMINI_API_KEY: str
     
+    # Service API Key for x-api-key authentication
+    SERVICE_API_KEY: str = "fashion-ai-service-key"  # Default key, should be overridden in .env
+    
     # AI Model Configuration
     USE_GEMINI_FOR_IMAGES: bool = True  # Set to False to use Replicate
     USE_GEMINI_FOR_VIDEOS: bool = True  # Set to False to use Replicate

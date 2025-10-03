@@ -38,6 +38,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add API key middleware
+from app.core.api_key_middleware import APIKeyMiddleware
+app.add_middleware(APIKeyMiddleware)
+
 # Ensure the output directory exists
 os.makedirs("output", exist_ok=True)
 
@@ -54,10 +58,17 @@ async def root():
     }
 
 # Import and include API routers
-from app.api.v1.endpoints import generate
+from app.api.v1.endpoints import generate, compatibility
 
 app.include_router(
     generate.router,
     prefix="/api/v1",
     tags=["generation"]
+)
+
+# Add compatibility router for Flutter app (polling-based API)
+app.include_router(
+    compatibility.router,
+    prefix="/api/v1",
+    tags=["compatibility"]
 )

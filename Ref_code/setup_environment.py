@@ -7,6 +7,10 @@ def create_env_file():
     env_content = """# API Keys - Replace with your actual keys
 OPENAI_API_KEY=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
 REPLICATE_API_TOKEN=r8_Nqq9h7dHI3bTviOfEge3HmrLNPUcoQS23et0O
+GEMINI_API_KEY=your-gemini-api-key-here
+
+# Service API Key for x-api-key authentication
+SERVICE_API_KEY=fashion-ai-service-key
 
 # Optional: Other configurations
 MODEL_NAME=gpt-4o
